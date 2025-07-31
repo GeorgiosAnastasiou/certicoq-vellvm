@@ -1,3 +1,7 @@
+(* import file equivalent for binary_format_printer *)
+(* From Wasm Require Import binary_format_printer. *)
+
+Unset Universe Checking.
 Require Export LambdaBoxMut.toplevel LambdaBoxLocal.toplevel LambdaANF.toplevel Codegen.toplevel.
 Require Import compcert.lib.Maps.
 Require Import ZArith.
@@ -10,9 +14,18 @@ Require Import ExtLib.Structures.Monad.
 Require Import MetaCoq.Common.BasicAst.
 From MetaCoq.Utils Require Import MCString.
 
+(*
+From CertiCoq.Codegenllvm Require Import
+     Minillvm MinillvmPrinter LambdaANF_to_llvm.
+ *)
+
+From CertiCoq.Codegenllvm Require Import 
+    LambdaANF_to_llvm.
+
 Import Monads.
 Import MonadNotation.
 Import ListNotations.
+
 
 (* Axioms that are only realized in ocaml *)
 Axiom (print_Clight : Clight.program -> Datatypes.unit).
@@ -80,6 +93,8 @@ Definition register_prims (id : positive) (env : Ast.Env.global_declarations) : 
   | Err s => failwith s
   end.
 
+(* failwith is here *)
+
 (** * CertiCoq's Compilation Pipeline, without code generation *)
 
 Section Pipeline.
@@ -117,6 +132,7 @@ Section Pipeline.
     if debug then compile_LambdaANF_debug next_id p  (* For debugging intermediate states of the λanf pipeline *)
     else compile_LambdaANF next_id p.
     
+Check CertiCoq_pipeline.
 
 End Pipeline.
 
@@ -124,13 +140,74 @@ Definition next_id := 100%positive.
 
 (** * The main CertiCoq pipeline, with MetaCoq's erasure and C-code generation *)
 
+(* WAS
 Definition pipeline (p : Template.Ast.Env.program) :=
   let genv := fst p in
   '(prs, next_id) <- register_prims next_id genv.(Ast.Env.declarations) ;;
 (*   p <- erase_PCUIC p ;;
  *)  p <- CertiCoq_pipeline next_id prs false p ;;
   compile_Clight prs p.
+ *)
+
+
+
+Definition pipeline (p : Template.Ast.Env.program) :=
+  let genv := fst p in
+  '(prs, next_id) <- register_prims next_id genv.(Ast.Env.declarations) ;;
+  p <- CertiCoq_pipeline next_id prs false p ;;   (* ← common front-end *)
+  (*o <- get_options ;;         *)                    (* NEW: inspect flag *)
+  compile_Clight prs p.
+  (*if o.(llvm)
+  then compile_llvm prs p            (* NEW branch *)
+  else compile_Clight prs p.            (* existing branch *)
+
+   *)
+
+Check pipeline.
+Print Cprogram.
+Check compile_Clight.
+Check run_pipeline.
+
+(*
+
+Definition pipeline_Wasm (p : Template.Ast.Env.program) :=
+  let genv := fst p in
+  '(prs, next_id) <- register_prims next_id genv.(Ast.Env.declarations) ;;
+(*   p <- erase_PCUIC p ;;
+ *)  p <- CertiCoq_pipeline next_id prs false p ;;
+     compile_LambdaANF_to_Wasm prs p.
+
+ *)
+
+
+(* PREVIOUS 
+
+Definition pipeline_llvm (p : Template.Ast.Env.program) :=
+  let genv := fst p in
+  '(prs, next_id) <- register_prims next_id genv.(Ast.Env.declarations) ;;
+(*   p <- erase_PCUIC p ;;
+ *)  p <- CertiCoq_pipeline next_id prs false p ;;
+     compile_LambdaANF_to_llvm prs p.
+ *)
+
+
+
+(* Basically a copy from the certicoq-wasm project *) 
+
+
+Definition pipeline_llvm (p : Template.Ast.Env.program) : pipelineM String.string :=
+  let genv := fst p in
+  '(prs, next_id) <- register_prims next_id genv.(Ast.Env.declarations) ;;
+(*   p <- erase_PCUIC p ;;
+ *)  p <- CertiCoq_pipeline next_id prs false p ;;
+ (* compile_LambdaANF_to_llvm prs p. *)
+     compile_llvm prs p.
+
  
+
+
+
+
 
 Definition default_opts : Options :=
   {| erasure_config := Erasure.default_erasure_config;
@@ -147,7 +224,14 @@ Definition default_opts : Options :=
      Pipeline_utils.prefix := "";
      Pipeline_utils.body_name := "body";
      prims := [];
+     (*llvm := false;*)
   |}.
+
+Check run_pipeline.
+Locate run_pipeline.
+
+(* TODO here I add more options for the Codegenllvm output *)
+
 
 Definition make_opts
            (erasure_config : Erasure.erasure_configuration)
@@ -162,6 +246,7 @@ Definition make_opts
            (prefix : string)                         (* Prefix for the FFI. Check why is this needed in the pipeline and not just the plugin *)
            (toplevel_name : string)                  (* Name of the toplevel function ("body" by default) *)
            (prims : list (kername * string * bool))  (* list of extracted constants *)
+           (*(llvm : bool)*)
   : Options :=
   {| erasure_config := erasure_config; 
      inductives_mapping := im;
@@ -176,7 +261,8 @@ Definition make_opts
      dev := dev;
      Pipeline_utils.prefix := prefix;
      Pipeline_utils.body_name := toplevel_name;
-     prims :=  prims |}.
+     prims :=  prims
+     (*llvm := llvm*) |}.
 
 
 Definition compile (opts : Options) (p : Template.Ast.Env.program) :=
@@ -200,3 +286,51 @@ Definition show_IR (opts : Options) (p : Template.Ast.Env.program) : (error stri
     (Ret (cps_show.show_exp nenv cenv false e), log)
   | Err s => (Err s, log)
   end.
+
+
+
+(* 
+Definition compile_Wasm (opts : Options) (p : Template.Ast.Env.program) : (error string * string) :=
+let (perr, log) := run_pipeline _ _ opts p pipeline_Wasm in
+  match perr with
+  | Ret p => (Ret (String.parse (binary_of_module p)), log)
+  | Err s => (Err s, log)
+  end.
+ *)
+
+
+(* PREVIOUSLY
+Definition compile_llvm (opts : Options) (p : Template.Ast.Env.program) : (error string * string) :=
+let (perr, log) := run_pipeline _ _ opts p pipeline_llvm in (*  equivalent, we mentioned the pipeline_llvm before *)
+  match perr with
+  | Ret p => (Ret (String.parse (binary_of_module p)), log) (* binary_of_module is the import *)
+  | Err s => (Err s, log)
+  end.
+
+ *)
+
+(* WAS LIKE THIS 
+Definition compile_llvm (opts:Options) (p:Template.Ast.Env.program)
+  : error string :=
+  match run_pipeline _ _ opts p pipeline_llvm with
+  | (Ret m, _) => Ret (MinillvmPrinter.str_module m)
+  | (Err e , _) => Err e
+  end. 
+
+ *)
+
+
+(* the equivalent
+Definition compile_llvm (opts : Options) (p : Template.Ast.Env.program) : (error string * string) :=
+let (perr, log) := run_pipeline _ _ opts p pipeline_llvm in
+  match perr with
+  | Ret p => (Ret (String.parse (binary_of_module p)), log)
+  | Err s => (Err s, log)
+  end.
+
+ *)
+
+Definition compile_llvm (opts : Options) (p : Template.Ast.Env.program) 
+  : error String.string * string :=
+  let '(perr, log) := run_pipeline _ _ opts p pipeline_llvm in
+  (perr, log).

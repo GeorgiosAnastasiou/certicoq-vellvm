@@ -28,7 +28,9 @@ let get_ocamlfind =
 
 let get_c_compiler =
   get_stringopt_option ["CertiCoq"; "CC"]
-        
+
+(* maybe to ADD here for llvm *)
+
 (* Taken from Coq's increment_subscript, but works on strings rather than idents *)
 let increment_subscript id =
   let len = String.length id in
@@ -196,6 +198,7 @@ let _ = Callback.register "coq_user_error" coq_user_error
 
 (** Compilation Command Arguments *)
 
+(* TODO llvm *)
 type command_args =
  | TYPED_ERASURE
  | UNSAFE_ERASURE
@@ -212,8 +215,10 @@ type command_args =
  | DEV of int    (* For development purposes *)
  | PREFIX of string (* Prefix to add to the generated FFI fns, avoids clashes with C fns *)
  | TOPLEVEL_NAME of string (* Name of the toplevel function ("body" by default) *)
+ (*| LLVM (* added this as well *) *)
  | FILENAME of string (* Name of the generated file *)
 
+ (* TODO llvm *)
 type options =
   { typed_erasure : bool;
     unsafe_erasure : bool;
@@ -232,6 +237,7 @@ type options =
     prefix    : string;
     toplevel_name : string;
     prims     : ((Kernames.kername * Kernames.ident) * bool) list;
+    (*llvm      : bool; (* added *) *)
     inductives_mapping : inductives_mapping;
   }
 
@@ -246,6 +252,7 @@ let check_build_dir d =
     CErrors.user_err Pp.(str "Could not compile: " ++ str d ++ str " is not a directory.")
   else d
   
+  (* TODO llvm *) 
 let default_options () : options =
   { typed_erasure = false;
     unsafe_erasure = false;
@@ -264,8 +271,11 @@ let default_options () : options =
     prefix    = "";
     toplevel_name = "body";
     prims     = [];
+    (*llvm      = false; *)
     inductives_mapping = get_global_inductives_mapping ();
   }
+
+(* TODO llvm *)
 
 let make_options (l : command_args list) (pr : ((Kernames.kername * Kernames.ident) * bool) list) (fname : string) : options =
   let rec aux (o : options) l =
@@ -288,6 +298,7 @@ let make_options (l : command_args list) (pr : ((Kernames.kername * Kernames.ide
     | DEV n    :: xs -> aux {o with dev = n} xs
     | PREFIX s :: xs -> aux {o with prefix = s} xs
     | TOPLEVEL_NAME s :: xs -> aux {o with toplevel_name = s} xs
+    (*| LLVM     :: xs -> aux {o with llvm = true} xs (* here as well *) *)
     | FILENAME s :: xs -> aux {o with filename = s} xs
   in
   let opts = { (default_options ()) with filename = fname } in
@@ -306,6 +317,8 @@ let no_unsafe_passes = make_unsafe_passes false
 
 let quote_inductives_mapping l =
   List.map (fun (hd, (na, cstrs)) -> (hd, (bytestring_of_string na, List.map (fun i -> coq_nat_of_int i) cstrs))) l
+
+(* maybe TODO llvm *)
 
 let make_pipeline_options (opts : options) =
   let erasure_config = 
@@ -327,6 +340,7 @@ let make_pipeline_options (opts : options) =
   let prefix = bytestring_of_string opts.prefix in
   let toplevel_name = bytestring_of_string opts.toplevel_name in
   let prims = get_global_prims () @ opts.prims in
+  (*let llvm = opts.llvm in (* did this as well *) *)
   let inductives_mapping = quote_inductives_mapping opts.inductives_mapping in
   (* Feedback.msg_debug Pp.(str"Prims: " ++ prlist_with_sep spc (fun ((x, y), wt) -> str (string_of_bytestring y)) prims); *)
   Pipeline.make_opts erasure_config inductives_mapping cps args anfc olevel timing timing_anf debug dev prefix toplevel_name prims
@@ -566,6 +580,8 @@ module CompileFunctor (CI : CompilerInterface) = struct
   let make_rt_file na =
     Boot.Env.Path.(to_string (relative (runtime_dir ()) na))
 
+
+  (* maybe llvm should be similar to this *)
   let compile_C opts gr imports =
     let () = compile_only opts gr imports in
     let imports = get_global_includes () @ imports in
@@ -902,6 +918,36 @@ module CompileFunctor (CI : CompilerInterface) = struct
     Printf.fprintf f "%s\n" s;
     close_out f
 
+(* additions for llvm, one exactly the same as wasm *)
+
+  let print_to_file_no_nl (s : string) (file : string) =
+    let f = open_out file in
+    Printf.fprintf f "%s" s;
+    close_out f
+
+(* one different *)
+(* TODO *)
+  let compile_wasm opts gr =
+    let term = quote opts gr in
+    let debug = opts.debug in
+    let options = make_pipeline_options opts in
+    let p = Pipeline.compile_Wasm options (Obj.magic term) in
+    match p with
+    | (CompM.Ret prg, dbg) ->
+      debug_msg debug "Finished compiling, printing to file.";
+      let time = Unix.gettimeofday() in
+      let suff = opts.ext in
+      let fname = opts.filename in
+      let file = fname ^ suff ^ ".wasm" in
+      print_to_file_no_nl (string_of_bytestring prg) file;
+      let time = (Unix.gettimeofday() -. time) in
+      debug_msg debug (Printf.sprintf "Printed to file %s in %f s.." file time);
+      debug_msg debug "Pipeline debug:";
+      debug_msg debug (string_of_bytestring dbg)
+    | (CompM.Err s, dbg) ->
+      debug_msg debug "Pipeline debug:";
+      debug_msg debug (string_of_bytestring dbg);
+      CErrors.user_err Pp.(str "compile_wasm" ++ (str "Could not compile: " ++ (pr_string s) ++ str "\n"))
 
   let show_ir opts gr =
     let term = quote opts gr in

@@ -1,14 +1,23 @@
 -R libraries                    CertiCoq.Libraries
 
+# Vellvm installation
+#
+-Q external/Vellvm/src/coq      Vellvm
+
 -R theories/Compiler            CertiCoq.Compiler
 -R theories/common              CertiCoq.Common
+#i dont need extraction to Clight for this project
+#but i do need it to not crash. Otherwise it changes everything
 -R theories/Extraction          CertiCoq.extraction
 -R theories/Glue                CertiCoq.Glue
 -R theories/LambdaBoxMut        CertiCoq.LambdaBoxMut
 -R theories/LambdaBoxLocal      CertiCoq.LambdaBoxLocal
 -R theories/LambdaANF           CertiCoq.LambdaANF
 -R theories/Codegen             CertiCoq.Codegen
+# llvm implementation
+-R theories/Codegenllvm         CertiCoq.Codegenllvm
 -R theories/Runtime             CertiCoq.runtime
+#-R theories/Compiler/llvm       CertiCoq.Compiler.llvm
 
 -R benchmarks                   CertiCoq.Benchmarks
 -R plugin                       CertiCoq.Plugin
@@ -22,3 +31,5 @@
 -I bootstrap/certicoqc
 -R bootstrap/certicoqchk        CertiCoq.CertiCoqCheck
 -I bootstrap/certicoqchk
+
+

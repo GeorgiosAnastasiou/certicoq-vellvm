@@ -17,6 +17,7 @@ Open Scope bs_scope.
 (* Author: Anonymized, 2019 *)
 
 (* Compiler options *)
+(* adding here llvm *)
 Record Options :=
   { erasure_config : erasure_configuration;
     inductives_mapping : EProgram.inductives_mapping; (* Mapping for inductives, set by global declarations in the plugin *)
@@ -37,6 +38,7 @@ Record Options :=
     prims    : list (kername * string * bool);
     (* List of constants that are realized in the target code.
      * kername: constant name, string: name of target primitive *)
+    (*llvm     : bool; *)
   }.
 
 

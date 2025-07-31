@@ -5,10 +5,21 @@
 -R LambdaANF            CertiCoq.LambdaANF
 -R ../libraries         CertiCoq.Libraries
 -R Codegen              CertiCoq.Codegen
+-R Codegenllvm          CertiCoq.Codegenllvm
 -R Glue                 CertiCoq.Glue
 -R Extraction           CertiCoq.extraction
-# -R Runtime              CertiCoq.runtime
+# -R Runtime            CertiCoq.runtime
 -R ExtractionVanilla    CertiCoq.extraction_vanilla
+# adding code for the llvm translation here (previous implementation, now obsolete)
+#-R Compiler/llvm       CertiCoq.Compiler.llvm
+
+#-Q $(shell opam var lib)/coq/user-contrib/Vellvm Vellvm
+
+# Vellvm
+-Q                      ../external/vellvm/src/coq Vellvm
+
+
+
 
 
 # common
@@ -109,6 +120,28 @@ Codegen/LambdaANF_to_Clight.v
 Codegen/LambdaANF_to_Clight_stack.v
 Codegen/toplevel.v
 
+# makes sense for it to go here
+
+# Compilation for codegenllvm
+# Codegenllvm
+
+
+#Codegenllvm/LambdaANF_to_llvm_utils.v
+#Codegenllvm/LambdaANF_to_llvm_primitives.v
+#Codegenllvm/toplevel.v
+#Codegenllvm/LambdaANF_to_llvm.v
+#Codegenllvm/Toy42.v
+Codegenllvm/LambdaANF_to_llvm.v
+
+#Codegenllvm/toplevel.v
+
+# Codegenllvm/LambdaANF_to_llvm_utils.v #why is this commented out?
+# Codegenllvm/LambdaANF_to_llvm_correct.v
+# Codegenllvm/LambdaANF_to_llvm_utils.v
+# Codegenllvm/LambdaANF_to_llvm_correct_inst.v
+# maybe?
+
+
 # Glue
 Glue/glue_utils.v
 Glue/glue.v
@@ -122,3 +155,15 @@ Extraction/extraction.v
 ExtractionVanilla/VanillaExtrOCamlInt63.v
 ExtractionVanilla/VanillaExtrOCamlFloats.v
 ExtractionVanilla/extraction.v
+
+## llvm, old implementation, now obsolete.
+#Compiler/llvm/MiniLLVMIR.v
+#Compiler/llvm/MiniLLVMCodegen.v
+#Compiler/llvm/MiniLLVMPrint.v
+# Compiler/llvm/MiniLLVMPipeline.v
+#Compiler/llvm/LambdaANF_to_MiniLLVM.v
+#Compiler/llvm/Funcs.v
+
+
+# Testing 
+#Testing/test_llvm.v
