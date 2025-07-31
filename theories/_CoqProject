@@ -16,9 +16,7 @@
 #-Q $(shell opam var lib)/coq/user-contrib/Vellvm Vellvm
 
 # Vellvm
-#   ------ WAS -----
-#-Q                      ../external/vellvm/src/coq Vellvm
--Q                      ../vellvm_local/src/coq Vellvm
+-Q                      ../external/vellvm/src/coq Vellvm
 
 
 
