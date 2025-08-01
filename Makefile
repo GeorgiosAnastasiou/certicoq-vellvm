@@ -4,7 +4,9 @@
 # --------------------------------------------------------------------------
 #Build the Vellvm core (Syntax/ Semantics/ Utils/ Handlers) exactly once
 # --------------------------------------------------------------------------
-VELLVM_DIR        := external/vellvm/src/coq
+# Locally VELLVM_DIR        := external/vellvm/src/coq
+VELLVM_DIR        := vellvm_local/src/coq
+
 VELLVM_CORE_STAMP := $(VELLVM_DIR)/.built-core   # touched after the sub-build
 
 $(VELLVM_CORE_STAMP):

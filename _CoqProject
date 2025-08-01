@@ -1,8 +1,11 @@
 -R libraries                    CertiCoq.Libraries
 
 # Vellvm installation
-#
--Q external/Vellvm/src/coq      Vellvm
+# ------ WAS ------
+# -Q external/Vellvm/src/coq      Vellvm
+-Q vellvm_local/src/coq      Vellvm
+
+
 
 -R theories/Compiler            CertiCoq.Compiler
 -R theories/common              CertiCoq.Common
