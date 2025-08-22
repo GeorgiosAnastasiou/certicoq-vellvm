@@ -34,12 +34,13 @@ Locate error.
 Print error. 
 
 From Coq Require Import BinNums ZArith.
-Open Scope N_scope. 
+(* Open Scope N_scope. somewhat Deprecated *)
+Open Scope positive_scope.
 Open Scope Z_scope.
 From QuickChick Require Import Show.
 
 Definition i32_42 : texp typ :=
-  (TYPE_I 32%N , EXP_Integer 42%Z).
+  (TYPE_I 32%positive , EXP_Integer 42%Z).
 
 Print i32_42. 
 
@@ -49,7 +50,7 @@ Definition ret_block : block typ :=
 Definition main_decl : declaration typ :=
   mk_declaration
       (Name "main")
-      (TYPE_Function (TYPE_I 32) [] false)  (* i32 @main() *)
+      (TYPE_Function (TYPE_I 32%positive) [] false)  (* i32 @main() *)
       ([],[]) [] [].
 
 About mk_definition.

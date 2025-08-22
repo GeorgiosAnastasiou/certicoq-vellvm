@@ -750,9 +750,9 @@ Section interp_prop_oom_extra.
     intros ? ? ? ? ? ? ?.
     pcofix self. pstep. intros u v ? euv. punfold euv.
     red in euv |- *. induction euv; pclearbot; eauto 7 with paco.
-    (*eapply Interp_Prop_OomT_Vis; eauto.
+    eapply Interp_Prop_OomT_Vis; eauto.
     intros. specialize (HK _ H). pclearbot.
-       right. eapply self; eauto. *)
+    right. eapply self; eauto.
   Qed.
 
   (* Not true anymore because things get flipped by eq1 and OOM_R *)

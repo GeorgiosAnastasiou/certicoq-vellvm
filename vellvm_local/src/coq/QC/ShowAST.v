@@ -4,7 +4,7 @@
     program should give you a string that can be read by clang.
  *)
 
-From Vellvm Require Import LLVMAst Utilities AstLib Syntax.CFG DynamicTypes QC.DList.
+From Vellvm Require Import LLVMAst Utilities AstLib Syntax.CFG DynamicTypes DList.
 
 Require Import Integers Floats.
 
@@ -32,6 +32,10 @@ Fixpoint concatStr (l : list string) : string :=
   end.
 (*  ------------------------------------------------------------------------- *)
 
+#[global] Instance Show_Pos : Show positive.
+split.
+exact (fun p => show (Zpos p)).
+Defined.
 
 Class DShow (A : Type) := { dshow : A -> DString }.
 
@@ -80,7 +84,8 @@ Section ShowInstances.
     | TYPE_I sz                 => string_to_DString "i" @@
                                     string_to_DString (show sz)
     | TYPE_IPTR                 => string_to_DString "iptr"
-    | TYPE_Pointer t            => dshow_typ t @@ string_to_DString "*"
+    | TYPE_Pointer (Some t)     => dshow_typ t @@ string_to_DString "*"
+    | TYPE_Pointer None         => string_to_DString "ptr"
     | TYPE_Void                 => string_to_DString "void"
     | TYPE_Half                 => string_to_DString "half"
     | TYPE_Float                => string_to_DString "float"
@@ -329,7 +334,7 @@ Section ShowInstances.
         end
     | FNATTR_Nocf_check => "nocf_check"
     | FNATTR_Shadowcallstack => "shadowcallstack"
-    | FNATTR_Mustprogress => "mustprogeress"
+    | FNATTR_Mustprogress => "mustprogress"
     (* | FNATTR_Warn_stack_size th  => - FNATTR_KeyValue *)
     | FNATTR_Vscale_range min max  =>
         match max with
@@ -452,7 +457,7 @@ Section ShowInstances.
 
 
   Definition double_to_hex_string (f : float) : string
-    := "0x" ++ NilEmpty.string_of_uint (N.to_hex_uint (Z.to_N (Int64.unsigned (Float.to_bits f)))).
+    := "0x" ++ NilEmpty.string_of_uint (N.to_hex_uint (Z.to_N (@unsigned 64 (Float.to_bits f)))).
 
   Definition float_to_hex_string (f : float32) : string
     := double_to_hex_string (Float32.to_double f).
@@ -463,10 +468,10 @@ Section ShowInstances.
   #[global] Instance showFloat32 : Show float32
     := {| show := float_to_hex_string |}.
 
-  Definition show_int (x : Integers.Int.int) : string
-    := show (Int.unsigned x).
+  Definition show_int {sz} (x : @bit_int sz) : string
+    := show (unsigned x).
 
-  #[global] Instance Show_Int : Show Integers.Int.int
+  #[global] Instance Show_Int {sz} : Show (@bit_int sz)
     := {| show := show_int|}.
 
   Definition show_fast_math (fm : fast_math) : string
@@ -563,8 +568,8 @@ Section ShowInstances.
     | EXP_Undef =>         false
     | EXP_Struct fields =>    false
     | EXP_Packed_struct fields =>     false
-    | EXP_Array elts =>               false
-    | EXP_Vector elts =>        false
+    | EXP_Array t elts =>               false
+    | EXP_Vector t elts =>        false
     | _ => true
     end.
 
@@ -603,11 +608,11 @@ Section ShowInstances.
                   DList_join [dshow ty ; string_to_DString " "] @@
                     dshow_exp false ex) fields) @@ string_to_DString "}>"
 
-    | EXP_Array elts =>
+    | EXP_Array t elts =>
         string_to_DString "[" @@
           concat_DString (string_to_DString ", ")
           (map (fun '(ty, ex) => DList_join [dshow ty ; string_to_DString " "] @@ dshow_exp false ex) elts) @@ string_to_DString "]"
-    | EXP_Vector elts => string_to_DString "<" @@ concat_DString (string_to_DString ", ") (map (fun '(ty, ex) => DList_join [dshow ty ; string_to_DString " "] @@ dshow_exp false ex) elts) @@ string_to_DString ">"
+    | EXP_Vector t elts => string_to_DString "<" @@ concat_DString (string_to_DString ", ") (map (fun '(ty, ex) => DList_join [dshow ty ; string_to_DString " "] @@ dshow_exp false ex) elts) @@ string_to_DString ">"
 
     | OP_IBinop iop t v1 v2 =>
         let second_expression :=
@@ -693,10 +698,10 @@ Section ShowInstances.
     string_to_DString "[ " @@ dshow_exp true e @@ list_to_DString [", "; "%"] @@ dshow bid @@ string_to_DString " ]".
 
   Definition intersperse (sep : string) (l : list string) : string
-    := fold_left (fun acc s => if StringOrdFacts.eqb "" acc then s else acc ++ sep ++ s) l "".
+    := fold_left (fun acc s => if String.eqb "" acc then s else acc ++ sep ++ s) l "".
 
   Definition dintersperse (sep : DString) (l : list DString) : DString
-    := fold_left (fun acc s => if StringOrdFacts.eqb "" (DString_to_string acc) then s else acc @@ sep @@ s) l (string_to_DString "").
+    := fold_left (fun acc s => if String.eqb "" (DString_to_string acc) then s else acc @@ sep @@ s) l (string_to_DString "").
 
   Fixpoint dconcat (sep : DString) (ls : list DString) :=
     match ls with
@@ -949,7 +954,7 @@ Section ShowInstances.
              list_to_DString (show_opt_list addrspace) 
 
              @@ string_to_DString " " @@
-             dshow fn @@ string_to_DString "(" @@
+             dshow_texp fn @@ string_to_DString "(" @@
              concat_DString (string_to_DString ", ") (map show_call_arg args) @@
              string_to_DString ") " @@
              concat_DString (string_to_DString " ") (map (fun x => string_to_DString (show_fn_attr x)) fn_attrs)
@@ -1216,7 +1221,7 @@ Definition dshow_definition (defn : definition typ (block typ * list (block typ)
 
         let align :=
           maybe_to_string
-            (fun a => concatStr ["align "; show a; " "])
+            (fun a => concatStr [", align "; show a; " "])
             (dc_align defn.(df_prototype)) in
 
         let gc := maybe_show (dc_gc defn.(df_prototype)) in
@@ -1252,7 +1257,7 @@ Definition dshow_declaration (decl: declaration typ) : DString :=
 
       let align :=
         maybe_to_string
-          (fun a => concatStr ["align "; show a; " "])
+          (fun a => concatStr [", align "; show a; " "])
           (dc_align decl) in
 
       let gc := maybe_show (dc_gc decl) in
@@ -1308,7 +1313,7 @@ Definition dshow_global (g : global typ) : DString :=
 
   let align :=
     maybe_to_string
-      (fun a => concatStr ["align "; show a; " "])
+      (fun a => concatStr [", align "; show a; " "])
       (g_align g) in
 
   DList_join

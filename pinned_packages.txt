@@ -1,0 +1,11 @@
+coq
+coq-compcert
+coq-metacoq
+coq-quickchick
+coq-stdlib
+coqide-server
+ocaml
+ocaml-base-compiler
+qcheck
+qcheck-core
+qcheck-ounit

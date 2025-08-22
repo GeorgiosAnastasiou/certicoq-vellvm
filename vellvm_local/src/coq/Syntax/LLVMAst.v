@@ -4,10 +4,8 @@ From Coq Require Import
      List
      String
      ZArith.
-(*From Vellvm Require Import
-   Utilities.*)
-From Vellvm.Utils Require Import Util Default Tactics.
-From Vellvm.Utils Require Import ListUtil.
+From Vellvm Require Import
+     Utilities.
 
 Import ListNotations.
 Open Scope string_scope.
@@ -51,9 +49,9 @@ Variant ident : Set :=
 
 Unset Elimination Schemes.
 Inductive typ : Set :=
-| TYPE_I (sz:N)
+| TYPE_I (sz:positive)
 | TYPE_IPTR
-| TYPE_Pointer (t:typ)
+| TYPE_Pointer (t: option typ)
 | TYPE_Void
 | TYPE_Half
 | TYPE_Float
@@ -353,8 +351,8 @@ Inductive exp : Set :=
 | EXP_Poison
 | EXP_Struct          (fields: list (T * exp))
 | EXP_Packed_struct   (fields: list (T * exp))
-| EXP_Array           (elts: list (T * exp))
-| EXP_Vector          (elts: list (T * exp))
+| EXP_Array           (t:T) (elts: list (T * exp))
+| EXP_Vector          (t:T) (elts: list (T * exp))
 | OP_IBinop           (iop:ibinop) (t:T) (v1:exp) (v2:exp)
 | OP_ICmp             (cmp:icmp)   (t:T) (v1:exp) (v2:exp)
 | OP_FBinop           (fop:fbinop) (fm:list fast_math) (t:T) (v1:exp) (v2:exp)
@@ -394,7 +392,7 @@ Inductive metadata : Set :=
 
 (* Used in switch branches which insist on integer literals *)
 Variant tint_literal : Set :=
-  | TInt_Literal (sz:N) (x:int_ast).
+  | TInt_Literal (sz:positive) (x:int_ast).
 
 Variant instr_id : Set :=
   | IId   (id:raw_id)    (* "Anonymous" or explicitly named instructions *)
@@ -686,7 +684,7 @@ Variant instr : Set :=
 | INSTR_Fence (syncscope:option string) (o:ordering)
 | INSTR_AtomicCmpXchg (c : cmpxchg)
 | INSTR_AtomicRMW (a :atomicrmw )
-| INSTR_VAArg (va_list_and_arg_list : texp) (t: typ) (* arg_list isn't actually a list, this is just the name of the argument  *)
+| INSTR_VAArg (va_list_and_arg_list : texp) (t: T) (* arg_list isn't actually a list, this is just the name of the argument  *)
 | INSTR_LandingPad
 .
 

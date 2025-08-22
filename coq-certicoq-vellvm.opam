@@ -1,0 +1,26 @@
+opam-version: "2.0"
+name: "coq-certicoq-vellvm-llvm"
+version: "dev"
+maintainer: "you@example.com"
+depends: [
+  "ocaml"        {>= "4.14.0" & < "5.0"}
+  "dune"         {>= "3.14.0"}
+  "coq"          {= "8.20.1"}
+  # Vellvm vendored deps (mirror v2.0.20250110)
+  "coq-itree"            {>= "5.2.0" & < "5.3~"}
+  "coq-ext-lib"          {>= "0.12.1" & < "0.13~"}
+  "coq-quickchick"       {=  "2.0.4"}
+  "coq-flocq"            {>= "4.2.0"}
+  "coq-mathcomp-ssreflect"
+  "coq-simple-io"
+  "coq-paco"
+  "coq-ceres"
+  # builders
+  "menhir"
+  "qcheck"
+  "cppo"
+]
+synopsis: "CertiCoq LambdaANF -> LLVM (Vellvm types), codegen-only"
+description: """
+Builds the Codegenllvm Coq files and the CertiCoq plugin on Coq 8.20,
+using vendored Vellvm sources (no coq-vellvm opam package installed)."""

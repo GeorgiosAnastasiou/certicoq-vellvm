@@ -21,6 +21,8 @@ open BinNat
 open BinInt
 open BinPos
 open Floats
+(* module Float0 = Floats0.Float *)
+(* module Float032 = Floats0.Float32 *)
 
 (* Coq's [nat] type and some of its operations *)
 
@@ -409,11 +411,14 @@ let coqstring_of_camlstring s =
   in cstring EmptyString (String.length s - 1)
 
 (* Floats *)
+(* this Float.to_bits is causing an issue. *)
+(* There is a Int64.float_of_bits but has a different type, so its not usable here *)
+(* I need to search the library specifically. Locate won't work because its not coq, its ocaml. I need a fresh correct Ocaml file to be compiled with a 'Locate Float.' if it exists in Ocaml. *)
 
 let camlfloat_of_coqfloat f =
-  Int64.float_of_bits(camlint64_of_coqint(Float.to_bits f))
+  Int64.float_of_bits(camlint64_of_coqint(Float.to_bits f)) (* I had made it Float0*)
 let camlfloat_of_coqfloat32 f =
-  Int32.float_of_bits(camlint_of_coqint(Float32.to_bits f))
+  Int32.float_of_bits(camlint_of_coqint(Float32.to_bits f)) (* I had made it Float032*)
 
 (* let coqfloat_of_camlfloat f =
  *   Float.of_bits(coqint_of_camlint64(Int64.bits_of_float f))

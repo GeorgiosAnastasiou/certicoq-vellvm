@@ -8,7 +8,9 @@ From Vellvm Require Import
   QC.Generators
   Handlers
   QC.DList
-  VellvmIntegers.
+  VellvmIntegers
+  DynamicTypes.
+
 (* Maybe also import InterpretationStack *)
 
 From ExtLib.Structures Require Export
@@ -262,7 +264,7 @@ Module GEN_ALIVE2 (ADDR : MemoryAddress.ADDRESS) (IP:MemoryAddress.INTPTR) (SIZE
     match t with
     | TYPE_Array n sub_t
     | TYPE_Vector n sub_t => depth_of_typ (sub_t) + 1
-    | TYPE_Pointer sub_t => depth_of_typ (sub_t) + 1
+    | TYPE_Pointer (Some sub_t) => depth_of_typ (sub_t) + 1
     | TYPE_Struct vars
     | TYPE_Packed_struct vars => fold_right (fun x acc => max (depth_of_typ x) acc) 0%nat vars
     | _ => 0
@@ -272,7 +274,7 @@ Fixpoint normalized_typ_eq (a : typ) (b : typ) {struct a} : bool
     := match a with
        | TYPE_I sz =>
          match b with
-         | TYPE_I sz' => if N.eq_dec sz sz' then true else false
+         | TYPE_I sz' => if Pos.eq_dec sz sz' then true else false
          | _ => false
          end
        | TYPE_IPTR =>
@@ -282,7 +284,12 @@ Fixpoint normalized_typ_eq (a : typ) (b : typ) {struct a} : bool
          end
        | TYPE_Pointer t =>
          match b with
-         | TYPE_Pointer t' => normalized_typ_eq t t'
+         | TYPE_Pointer t' =>
+             match (t, t') with
+             | (Some t, Some t') => normalized_typ_eq t t'
+             | (None, None) => true
+             | _ => false
+             end
          | _ => false
          end
        | TYPE_Void =>
@@ -391,16 +398,18 @@ Fixpoint normalized_typ_eq (a : typ) (b : typ) {struct a} : bool
     let fix gen_size_0 (ty : typ) : GenALIVE2 (exp typ) :=
           match ty with
           | TYPE_I sz =>
-              ret sz >>= gen_int_exp
+              ret (Npos sz) >>= gen_int_exp
           | TYPE_Float =>
               gen_float_exp
           | TYPE_Double =>
               f32 <- gen_float32;;
               ret (EXP_Double (Float.of_single f32))
-          | TYPE_Array n t
+          | TYPE_Array n t =>
+              es <- vectorOf_ALIVE2 (N.to_nat n) (gen_exp_size 0 t);;
+              ret (EXP_Array (TYPE_Array n t) (map (fun e => (t, e)) es))
           | TYPE_Vector n t =>
               es <- vectorOf_ALIVE2 (N.to_nat n) (gen_exp_size 0 t);;
-              ret (EXP_Array (map (fun e => (t, e)) es))
+              ret (EXP_Vector (TYPE_Vector n t) (map (fun e => (t, e)) es))
           | TYPE_Struct vars =>
               failGen "Struct generation unimplemented"
           | TYPE_Packed_struct vars =>
@@ -454,6 +463,7 @@ Fixpoint normalized_typ_eq (a : typ) (b : typ) {struct a} : bool
         ret (IId i, instr)
     end.
 
+  (* TODO: handle opaque pointers?  *)
   Fixpoint gen_instantiate_instr (index : nat) (tgt : typ) {struct index}: GenALIVE2 (instr_id * instr typ) :=
     match tgt with
     | TYPE_I _ =>
@@ -516,11 +526,11 @@ Fixpoint normalized_typ_eq (a : typ) (b : typ) {struct a} : bool
                          ret ins
         | _ => ret ins
         end
-    | TYPE_Pointer t' =>
+    | TYPE_Pointer (Some t') =>
         e_src <- gen_exp_ident tgt;;
         e_input <- gen_exp_size 0 t';;
         let ins := INSTR_Store (t', e_input) (tgt, e_src) [] in
-        add_id_to_instr (tgt, ins)
+        add_id_to_instr (TYPE_Void, ins)
     | _ => failGen "Unimplemented"
     end.
 
@@ -553,7 +563,7 @@ Fixpoint normalized_typ_eq (a : typ) (b : typ) {struct a} : bool
   (*     end;; *)
   (*   @foldM GenALIVE2 MGEN step []. *)
 
-
+  (* TODO: handle opaque pointers?  *)
   Fixpoint gen_instrs (depth : nat) (t : typ) {struct depth} : GenALIVE2 (list (instr_id * instr typ))
     :=
     (* here is a potential infinite loop *)
@@ -580,9 +590,9 @@ Fixpoint normalized_typ_eq (a : typ) (b : typ) {struct a} : bool
          *)
         let sz_nat := N.to_nat sz in
         let ins_alloca := INSTR_Alloca t [] in
-        '(inst_alloca_id, inst_alloca_instr) <- hide_local_ctx (add_id_to_instr (TYPE_Pointer t, ins_alloca));;
+        '(inst_alloca_id, inst_alloca_instr) <- hide_local_ctx (add_id_to_instr (TYPE_Pointer (Some t), ins_alloca));;
         inst_alloca_raw_id <- instr_id2raw_id inst_alloca_id;;
-        let ins_load := INSTR_Load t (TYPE_Pointer t, EXP_Ident (ID_Local inst_alloca_raw_id)) [] in
+        let ins_load := INSTR_Load t (TYPE_Pointer (Some t), EXP_Ident (ID_Local inst_alloca_raw_id)) [] in
         '(inst_load_id, inst_load_instr) <- add_id_to_instr (t, ins_load);;
         inst_load_raw_id <- instr_id2raw_id inst_load_id;;
         insts <- gen_instrs_arrays (depth - 1) (inst_load_raw_id) t true;;
@@ -594,9 +604,9 @@ Fixpoint normalized_typ_eq (a : typ) (b : typ) {struct a} : bool
     | TYPE_Array sz t' => 
         let sz_nat := N.to_nat sz in
         let ins_alloca := INSTR_Alloca t [] in
-        '(inst_alloca_id, inst_alloca_instr) <- hide_local_ctx (add_id_to_instr (TYPE_Pointer t, ins_alloca));;
+        '(inst_alloca_id, inst_alloca_instr) <- hide_local_ctx (add_id_to_instr (TYPE_Pointer (Some t), ins_alloca));;
         inst_alloca_raw_id <- instr_id2raw_id inst_alloca_id;;
-        let ins_load := INSTR_Load t (TYPE_Pointer t, EXP_Ident (ID_Local inst_alloca_raw_id)) [] in
+        let ins_load := INSTR_Load t (TYPE_Pointer (Some t), EXP_Ident (ID_Local inst_alloca_raw_id)) [] in
         '(inst_load_id, inst_load_instr) <- add_id_to_instr (t, ins_load);;
         inst_load_raw_id <- instr_id2raw_id inst_load_id;;
         insts <- gen_instrs_arrays (depth - 1) (inst_load_raw_id) t false;;
@@ -607,9 +617,9 @@ Fixpoint normalized_typ_eq (a : typ) (b : typ) {struct a} : bool
         (* ret (upper_instrs ++ l_instrs) *)
     | TYPE_Struct fields =>
         let ins_alloca := INSTR_Alloca t [] in
-        '(inst_alloca_id, inst_alloca_instr) <- hide_local_ctx (add_id_to_instr (TYPE_Pointer t, ins_alloca));;
+        '(inst_alloca_id, inst_alloca_instr) <- hide_local_ctx (add_id_to_instr (TYPE_Pointer (Some t), ins_alloca));;
         inst_alloca_raw_id <- instr_id2raw_id inst_alloca_id;;
-        let ins_load := INSTR_Load t (TYPE_Pointer t, EXP_Ident (ID_Local inst_alloca_raw_id)) [] in
+        let ins_load := INSTR_Load t (TYPE_Pointer (Some t), EXP_Ident (ID_Local inst_alloca_raw_id)) [] in
         '(inst_load_id, inst_load_instr) <- add_id_to_instr (t, ins_load);;
         inst_load_raw_id <- instr_id2raw_id inst_load_id;;
         insts <- gen_instrs_arrays (depth - 1) (inst_load_raw_id) t false;;
@@ -620,9 +630,9 @@ Fixpoint normalized_typ_eq (a : typ) (b : typ) {struct a} : bool
         (* ret (upper_instrs ++ l_instrs) *)
     | TYPE_Packed_struct fields =>
         let ins_alloca := INSTR_Alloca t [] in
-        '(inst_alloca_id, inst_alloca_instr) <- hide_local_ctx (add_id_to_instr (TYPE_Pointer t, ins_alloca));;
+        '(inst_alloca_id, inst_alloca_instr) <- hide_local_ctx (add_id_to_instr (TYPE_Pointer (Some t), ins_alloca));;
         inst_alloca_raw_id <- instr_id2raw_id inst_alloca_id;;
-        let ins_load := INSTR_Load t (TYPE_Pointer t, EXP_Ident (ID_Local inst_alloca_raw_id)) [] in
+        let ins_load := INSTR_Load t (TYPE_Pointer (Some t), EXP_Ident (ID_Local inst_alloca_raw_id)) [] in
         '(inst_load_id, inst_load_instr) <- add_id_to_instr (t, ins_load);;
         inst_load_raw_id <- instr_id2raw_id inst_load_id;;
         insts <- gen_instrs_arrays (depth - 1) (inst_load_raw_id) t false;;
@@ -631,7 +641,7 @@ Fixpoint normalized_typ_eq (a : typ) (b : typ) {struct a} : bool
         (* l_instrs <- foldM (fun acc t' => gen_instrs (depth - 1) t' >>= (fun instrs => ret (acc ++ instrs))) [] fields;; *)
         (* upper_instrs <- gen_instr_iter (List.length fields) [];; *)
         (* ret (upper_instrs ++ l_instrs) *)
-    | TYPE_Pointer t' =>
+    | TYPE_Pointer (Some t') =>
     (* Generate alloca *)
         let ins_alloca := INSTR_Alloca t [] in
         inst_alloca <- add_id_to_instr (t, ins_alloca);;
@@ -850,28 +860,17 @@ Fixpoint normalized_typ_eq (a : typ) (b : typ) {struct a} : bool
   
   Fixpoint gen_uvalue (t : typ) : GenALIVE2 uvalue :=
     match t with
-    | TYPE_I i =>
-        match i with
-        | 1%N =>
-            ret UVALUE_I1 <*> (ret repr <*> lift_GenALIVE2 (choose (0, 1)))
-        | 8%N =>
-            ret UVALUE_I8 <*> (ret repr <*> lift_GenALIVE2 (choose (0, 2^8 - 1)))
-        | 32%N =>
-            ret UVALUE_I32 <*> (ret repr <*> lift_GenALIVE2 (choose (0, 10000))) (* Modify to smaller number. Should be 2^32 - 1 *)
-        | 64%N =>
-            ret UVALUE_I64 <*> (ret repr <*> lift_GenALIVE2 (choose (0, 10000))) (* Modify to smaller number. Should be 2^64 - 1 *)
-        | _ =>
-            failGen "Invalid size"
-        end
+    | @TYPE_I sz =>
+        ret (@UVALUE_I sz) <*> (ret repr <*> lift_GenALIVE2 (choose (0, Z.min (2^(Zpos sz) - 1) 10000)))
     | TYPE_Float =>
         ret UVALUE_Float <*> lift_GenALIVE2 fing32
     | TYPE_Double =>
         failGen "Generating UValue Double - Not supported"
     | TYPE_Void => ret UVALUE_None
     | TYPE_Vector sz subtyp =>
-        ret UVALUE_Vector <*> (vectorOf_ALIVE2 (N.to_nat sz) (gen_uvalue subtyp))
+        ret (UVALUE_Vector (DTYPE_Vector sz (TypToDtyp.typ_to_dtyp [] subtyp))) <*> (vectorOf_ALIVE2 (N.to_nat sz) (gen_uvalue subtyp))
     | TYPE_Array sz subtyp =>
-        ret UVALUE_Array <*> (vectorOf_ALIVE2 (N.to_nat sz) (gen_uvalue subtyp))
+        ret (UVALUE_Array (DTYPE_Array sz (TypToDtyp.typ_to_dtyp [] subtyp))) <*> (vectorOf_ALIVE2 (N.to_nat sz) (gen_uvalue subtyp))
     | _ => failGen "Invalid"
     end.
                                             
