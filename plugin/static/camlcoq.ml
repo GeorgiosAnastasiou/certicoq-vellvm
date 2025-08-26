@@ -24,6 +24,13 @@ open Floats
 module Float0 = Floats0.Float
 module Float032 = Floats0.Float32
 
+(*
+open Bits
+let p64 = Coq_xO (Coq_xO (Coq_xO (Coq_xO (Coq_xO (Coq_xO Coq_xH)))))
+let p32 = Coq_xO (Coq_xO (Coq_xO (Coq_xO (Coq_xO Coq_xH))))
+*)
+
+
 (* Coq's [nat] type and some of its operations *)
 
 module Nat = struct
@@ -411,20 +418,15 @@ let coqstring_of_camlstring s =
   in cstring EmptyString (String.length s - 1)
 
 (* Floats *)
-(* this Float.to_bits is causing an issue. *)
-(* There is a Int64.float_of_bits but has a different type, so its not usable here *)
-(* I need to search the library specifically. Locate won't work because its not coq, its ocaml. I need a fresh correct Ocaml file to be compiled with a 'Locate Float.' if it exists in Ocaml. *)
 
 
-
-(* originally:
+(* it was: 
 let camlfloat_of_coqfloat f =
-  Int64.float_of_bits(camlint64_of_coqint(Float.to_bits f)) (* I had made it Float0*)
+  Int64.float_of_bits(camlint64_of_coqint(Float.to_bits f))
 let camlfloat_of_coqfloat32 f =
-  Int32.float_of_bits(camlint_of_coqint(Float32.to_bits f)) (* I had made it Float032*)
+  Int32.float_of_bits(camlint_of_coqint(Float32.to_bits f))
 *)
 
-(* floats might need to be reimported from compcert somehow *)
 
 
 (* this works.. for this file at least*)
@@ -432,6 +434,17 @@ let camlfloat_of_coqfloat f =
   Int64.float_of_bits(camlint64_of_coqint(Float0.to_bits f))
 let camlfloat_of_coqfloat32 f =
   Int32.float_of_bits(camlint_of_coqint(Float032.to_bits f))
+
+
+(*
+let camlfloat_of_coqfloat f =
+  Int64.float_of_bits (camlint64_of_coqint (unsigned p64 (F64.to_bits f)))
+
+let camlfloat_of_coqfloat32 f =
+  Int32.float_of_bits (camlint_of_coqint (unsigned p32 (F32.to_bits f)))
+*)
+
+
 
 
 

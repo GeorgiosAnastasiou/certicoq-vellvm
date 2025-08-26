@@ -74,22 +74,24 @@ module type CompilerInterface = sig
   val generate_ffi :
     Pipeline_utils.coq_Options -> Ast0.Env.program -> (((name_env * Clight.program) * Clight.program) * Bytestring.String.t list) CompM.error  
 end
-
+(* addition here for llvm *)
 module CompileFunctor (CI : CompilerInterface) : sig
   val compile_only : options -> Names.GlobRef.t -> import list -> unit
   val generate_glue_only : options -> Names.GlobRef.t -> unit
   val compile_C : options -> Names.GlobRef.t -> import list -> unit
   val show_ir : options -> Names.GlobRef.t -> unit
+  val compile_llvm : options -> Names.GlobRef.t -> unit
   val ffi_command : options -> Names.GlobRef.t -> unit
   val glue_command : options -> Names.GlobRef.t list -> unit
   val eval_gr : options -> Names.GlobRef.t -> import list -> Constr.t
   val eval : options -> Environ.env -> Evd.evar_map -> EConstr.t -> import list -> Constr.t
 end
-
+(* and here *)
 val compile_only : options -> Names.GlobRef.t -> import list -> unit
 val generate_glue_only : options -> Names.GlobRef.t -> unit
 val compile_C : options -> Names.GlobRef.t -> import list -> unit
 val show_ir : options -> Names.GlobRef.t -> unit
+val compile_llvm : options -> Names.GlobRef.t -> unit
 val ffi_command : options -> Names.GlobRef.t -> unit
 val glue_command : options -> Names.GlobRef.t list -> unit
 val eval_gr : options -> Names.GlobRef.t -> import list -> Constr.t

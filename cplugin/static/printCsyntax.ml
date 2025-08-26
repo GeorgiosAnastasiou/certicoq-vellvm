@@ -206,17 +206,17 @@ let print_typed_value p v ty =
       print_float p (camlfloat_of_coqfloat f)
   | Vsingle f, _ ->
       print_float p (camlfloat_of_coqfloat32 f)
-  | Vlong n, Ctypes.Tlong(Unsigned, _) ->
-      Printf.printf "Printing long: %s\n" (Int64.to_string (Z.to_int64 (Integers.Int64.intval n)));
+  | Vlong n, Ctypes.Tlong(Unsigned, _) ->  
+      Printf.printf "Printing long: %s\n" (Int64.to_string (Z.to_int64 (n : Integers.Int64.int).intval));
       fprintf p "%LuLLU" (camlint64_of_coqint n)
   | Vlong n, _ ->
-    Printf.printf "Printing long: %s\n" (Int64.to_string (Z.to_int64 (Integers.Int64.intval n)));
+    Printf.printf "Printing long: %s\n" (Int64.to_string (Z.to_int64 (n : Integers.Int64.int).intval)); 
     fprintf p "%LdLL" (camlint64_of_coqint n)
   | Vptr(b, ofs), _ ->
       fprintf p "<ptr%a>" !print_pointer_hook (b, Obj.magic ofs)
   | Vundef, _ ->
       fprintf p "<undef>"
-
+(* above was Integers.Int64.intval *)
 let print_value p v = print_typed_value p v Tvoid
 
 let rec expr p (prec, e) =

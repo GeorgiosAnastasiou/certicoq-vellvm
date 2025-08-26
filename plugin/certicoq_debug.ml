@@ -1,5 +1,3 @@
-open Feedback
-
 let certicoq_debug = ref true
 
 let camlstring_of_coqstring (s: char list) =
