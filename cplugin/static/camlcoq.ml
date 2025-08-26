@@ -16,12 +16,48 @@
 
 (* Library of useful Caml <-> Coq conversions *)
 
+(* 
+worst case, definitions I will need from compcert: 
+Definition to_bits (f: float): int64 := Int64.repr (bits_of_b64 f).
+Definition of_bits (b: int64): float := b64_of_bits (Int64.unsigned b).
+https://compcert.org/doc/html/compcert.lib.Floats.html
+*)
+
+
 open Datatypes
 open BinNums
 open BinNat
 open BinInt
 open BinPos
 open! Floats
+module Float0 = Floats0.Float
+module Float032 = Floats0.Float32
+
+
+(*
+
+open Bits
+(* positive literals for bit widths *)
+let p64 = Coq_xO (Coq_xO (Coq_xO (Coq_xO (Coq_xO (Coq_xO Coq_xH)))))
+let p32 = Coq_xO (Coq_xO (Coq_xO (Coq_xO (Coq_xO Coq_xH))))
+
+(* personal helpers *)
+
+let bit64_of_int64_bits (w:Int64.t) : Integers0.bit_int =
+  Integers0.{ intval = coqint_of_camlint64 w }
+
+let bit32_of_int32_bits (w:Int32.t) : Integers0.bit_int =
+  Integers0.{ intval = coqint_of_camlint w }
+
+let z_of_bit (b:Integers0.bit_int) : BinNums.coq_Z =
+  (b : Integers0.bit_int).intval
+
+
+  *)
+
+
+
+
 
 (* Coq's [nat] type and some of its operations *)
 
@@ -271,13 +307,19 @@ let camlint_of_coqZ (i : Z.t) : int32 =
   Z.to_int32 i
 
 let camlint_of_coqint (i : Integers.Int.int) : int32 = 
-  Z.to_int32 (Integers.Int.intval i)
+  Z.to_int32 ((i : Integers.Int.int).intval) 
+  (* this line above was Integers.Int.intval i*)
+
+
 let coqint_of_camlint (i : int32) : Integers.Int.int = 
   Integers.Int.{ intval = Z.of_uint32 i }
 
    (* interpret the int32 as unsigned so that result Z is in range for int *)
 let camlint64_of_coqint (i : Integers.Int64.int) : int64 = 
-  Z.to_int64 (Integers.Int64.intval i)
+  Z.to_int64 ((i : Integers.Int64.int).intval)
+
+    (* this line above was
+       Integers.Int64.intval i *)
 
 let coqint_of_camlint64 (i : int64) : Integers.Int64.int = 
   Integers.Int64.{ intval = Z.of_uint64 i }
@@ -339,15 +381,34 @@ let coqstring_uppercase_ascii_of_camlstring s =
 
 (* Floats *)
 
+(* ---- WAS -----*)
 let coqfloat_of_camlfloat f =
-  Float.of_bits(coqint_of_camlint64(Int64.bits_of_float f))
+  Float0.of_bits(coqint_of_camlint64(Int64.bits_of_float f))
 let camlfloat_of_coqfloat f =
-  Int64.float_of_bits(camlint64_of_coqint(Float.to_bits f))
+  Int64.float_of_bits(camlint64_of_coqint(Float0.to_bits f))
 
 let coqfloat32_of_camlfloat f =
-  Float32.of_bits(coqint_of_camlint(Int32.bits_of_float f))
+  Float032.of_bits(coqint_of_camlint(Int32.bits_of_float f))
 let camlfloat_of_coqfloat32 f =
-  Int32.float_of_bits(camlint_of_coqint(Float32.to_bits f))
+  Int32.float_of_bits(camlint_of_coqint(Float032.to_bits f))
+
+
+(* 64-bit *) (*
+let coqfloat_of_camlfloat f =
+  Float.of_bits (repr p64 (coqint_of_camlint64 (Int64.bits_of_float f)))
+
+let camlfloat_of_coqfloat f =
+  let b = Float.to_bits f in
+  Int64.float_of_bits (camlint64_of_coqint (unsigned p64 b))
+
+(* 32-bit *)
+let coqfloat32_of_camlfloat f =
+  Float32.of_bits (repr p32 (coqint_of_camlint (Int32.bits_of_float f)))
+
+let camlfloat_of_coqfloat32 f =
+  let b = Float32.to_bits f in
+  Int32.float_of_bits (camlint_of_coqint (unsigned p32 b))
+*)
 
 let rec implode = function
     []       -> ""

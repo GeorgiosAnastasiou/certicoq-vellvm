@@ -230,6 +230,16 @@ extraction/floatOps.ml
 extraction/floatOps.mli
 extraction/floats.ml
 extraction/floats.mli
+
+extraction/floats0.ml
+extraction/floats0.mli
+extraction/integers0.ml
+extraction/integers0.mli
+extraction/coqlib1.ml
+extraction/coqlib1.mli
+
+
+
 extraction/frame.ml
 extraction/frame.mli
 extraction/globalenvs.ml

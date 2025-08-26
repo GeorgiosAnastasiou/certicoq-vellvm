@@ -197,6 +197,8 @@ SafeTemplateErasure
 ZArith_dec
 Coqlib0
 
+Coqlib1
+
 MonadExc
 Monad_utils
 ExceptionMonad
@@ -252,7 +254,12 @@ IEEE754_extra
 Archi
 Zbits
 Integers
+
+Integers0
 Floats
+
+Floats0
+
 AST
 Values
 Values0
