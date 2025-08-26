@@ -1,10 +1,6 @@
 .PHONY: all submodules runtime plugin cplugin install clean bootstrap
 
-# i had it commented out but i re-added it as for now I just want to see the pipeline working. 
-# --------------------------------------------------------------------------
-#Build the Vellvm core (Syntax/ Semantics/ Utils/ Handlers) exactly once
-# --------------------------------------------------------------------------
-# Locally VELLVM_DIR        := external/vellvm/src/coq
+# added these lines from here
 VELLVM_DIR        := vellvm_local/src/coq
 
 VELLVM_CORE_STAMP := $(VELLVM_DIR)/.built-core   # touched after the sub-build
@@ -20,6 +16,7 @@ all theories/Extraction/extraction.vo: $(VELLVM_CORE_STAMP) theories/Makefile li
 #all theories/Extraction/extraction.vo: theories/Makefile libraries/Makefile
 	$(MAKE) -C libraries -j1
 	$(MAKE) -C theories  -j1
+# till here. Obviously, it had its own 'all'
 
 theories/Makefile: theories/_CoqProject
 	cd theories;coq_makefile -f _CoqProject -o Makefile
@@ -30,7 +27,6 @@ libraries/Makefile: libraries/_CoqProject
 submodules:
 	git submodule update
 	./make_submodules.sh
-
 
 plugins: plugin cplugin
 
