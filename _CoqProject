@@ -3,7 +3,7 @@
 # Vellvm installation
 # ------ WAS ------
 # -Q external/Vellvm/src/coq      Vellvm
--Q vellvm_local/src/coq      Vellvm
+#-Q vellvm_local/src/coq      Vellvm
 
 
 

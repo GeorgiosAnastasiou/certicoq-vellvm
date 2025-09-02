@@ -280,6 +280,14 @@ extraction/lambdaANF_to_Clight.ml
 extraction/lambdaANF_to_Clight.mli
 extraction/lambdaANF_to_Clight_stack.ml
 extraction/lambdaANF_to_Clight_stack.mli
+
+# possibly more files are needed here.
+
+extraction/lambdaANF_to_llvm.ml
+extraction/lambdaANF_to_llvm.mli
+extraction/toplevel3.ml
+extraction/toplevel3.mli
+
 extraction/lambdaBoxLocal_to_LambdaANF.ml
 extraction/lambdaBoxLocal_to_LambdaANF.mli
 extraction/lambdaBoxMut_to_LambdaBoxLocal.ml
@@ -330,6 +338,10 @@ extraction/memdata.ml
 extraction/memdata.mli
 extraction/memory.ml
 extraction/memory.mli
+
+extraction/memory0.ml
+extraction/memory0.mli
+
 extraction/memtype.ml
 extraction/memtype.mli
 extraction/monad0.ml

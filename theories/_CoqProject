@@ -13,7 +13,7 @@
 -R ExtractionVanilla    CertiCoq.extraction_vanilla
 
 # and this
--Q                      ../vellvm_local/src/coq Vellvm
+#-Q                      ../vellvm_local/src/coq Vellvm
 
 # common
 common/exceptionMonad.v

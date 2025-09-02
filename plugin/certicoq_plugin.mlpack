@@ -277,6 +277,9 @@ Ctypesdefs
 Memtype
 Memdata
 Memory
+
+Memory0
+
 Globalenvs
 Clight
 PrintAST
@@ -289,6 +292,9 @@ Toplevel
 Toplevel0
 Toplevel1
 Toplevel2
+
+LambdaANF_to_llvm
+
 Toplevel3
 Glue_utils
 Glue

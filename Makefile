@@ -1,22 +1,27 @@
 .PHONY: all submodules runtime plugin cplugin install clean bootstrap
 
 # added these lines from here
-VELLVM_DIR        := vellvm_local/src/coq
+#VELLVM_DIR        := vellvm_local/src/coq
 
-VELLVM_CORE_STAMP := $(VELLVM_DIR)/.built-core   # touched after the sub-build
+#VELLVM_CORE_STAMP := $(VELLVM_DIR)/.built-core   # touched after the sub-build
 
 
-$(VELLVM_CORE_STAMP):
-	# Always wipe the previous auto-generated files
-	rm -f $(VELLVM_DIR)/Makefile.core $(VELLVM_DIR)/.built-core
-	$(MAKE) -C $(VELLVM_DIR) -f build-core.mk
-	touch $@
+#$(VELLVM_CORE_STAMP):
+#	# Always wipe the previous auto-generated files
+#	rm -f $(VELLVM_DIR)/Makefile.core $(VELLVM_DIR)/.built-core
+#	$(MAKE) -C $(VELLVM_DIR) -f build-core.mk
+#	touch $@
 
-all theories/Extraction/extraction.vo: $(VELLVM_CORE_STAMP) theories/Makefile libraries/Makefile
+#all theories/Extraction/extraction.vo: $(VELLVM_CORE_STAMP) theories/Makefile libraries/Makefile
 #all theories/Extraction/extraction.vo: theories/Makefile libraries/Makefile
-	$(MAKE) -C libraries -j1
-	$(MAKE) -C theories  -j1
+#	$(MAKE) -C libraries -j1
+#	$(MAKE) -C theories  -j1
 # till here. Obviously, it had its own 'all'
+
+all theories/Extraction/extraction.vo: theories/Makefile libraries/Makefile
+	$(MAKE) -C libraries 
+	$(MAKE) -C theories
+
 
 theories/Makefile: theories/_CoqProject
 	cd theories;coq_makefile -f _CoqProject -o Makefile
