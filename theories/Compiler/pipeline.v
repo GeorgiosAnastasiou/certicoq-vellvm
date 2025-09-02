@@ -10,6 +10,9 @@ Require Import ExtLib.Structures.Monad.
 Require Import MetaCoq.Common.BasicAst.
 From MetaCoq.Utils Require Import MCString.
 
+From CertiCoq.Codegenllvm Require Import 
+    LambdaANF_to_llvm.
+
 Import Monads.
 Import MonadNotation.
 Import ListNotations.
@@ -149,6 +152,14 @@ Definition default_opts : Options :=
      prims := [];
   |}.
 
+Definition pipeline_llvm (p : Template.Ast.Env.program) : pipelineM String.string :=
+  let genv := fst p in
+  '(prs, next_id) <- register_prims next_id genv.(Ast.Env.declarations) ;;
+(*   p <- erase_PCUIC p ;;
+ *)  p <- CertiCoq_pipeline next_id prs false p ;;
+ (* compile_LambdaANF_to_llvm prs p. *)
+     compile_llvm prs p.
+
 Definition make_opts
            (erasure_config : Erasure.erasure_configuration)
            (im : EProgram.inductives_mapping)
@@ -200,3 +211,9 @@ Definition show_IR (opts : Options) (p : Template.Ast.Env.program) : (error stri
     (Ret (cps_show.show_exp nenv cenv false e), log)
   | Err s => (Err s, log)
   end.
+
+
+Definition compile_llvm (opts : Options) (p : Template.Ast.Env.program) 
+  : error String.string * string :=
+  let '(perr, log) := run_pipeline _ _ opts p pipeline_llvm in
+  (perr, log).
