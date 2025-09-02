@@ -1,3 +1,4 @@
+Unset Universe Checking.
 Require Export LambdaBoxMut.toplevel LambdaBoxLocal.toplevel LambdaANF.toplevel Codegen.toplevel.
 Require Import compcert.lib.Maps.
 Require Import ZArith.

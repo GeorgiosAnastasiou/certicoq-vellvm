@@ -1,6 +1,7 @@
 (** * Trivial LambdaANF to LLVM Backend 
     This backend ignores the input LambdaANF expression and always returns "42". *)
 
+Unset Universe Checking.
 Require Import Coq.Strings.String.
 From CertiCoq.LambdaANF Require Import cps cps_util.
 From CertiCoq.Common Require Import Pipeline_utils.  
