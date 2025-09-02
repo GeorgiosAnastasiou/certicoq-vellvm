@@ -1,24 +1,12 @@
 (** * Trivial LambdaANF to LLVM Backend 
     This backend ignores the input LambdaANF expression and always returns "42". *)
 
-Unset Universe Checking.
 Require Import Coq.Strings.String.
 From CertiCoq.LambdaANF Require Import cps cps_util.
-From CertiCoq.Common Require Import Pipeline_utils.  (* Provides name_env, ctor_env, prim_env, error monad etc. *)
+From CertiCoq.Common Require Import Pipeline_utils.  
+(* Provides name_env, ctor_env, prim_env, error monad etc. *)
 From ExtLib Require Import Monads.
 
-(* Import MonadNotation. *)
-(* For using monadic notation like 'ret' if available. *) 
-
-
-(* From CertiCoq Require Import LambdaANF.toplevel.
-   ---
-   not used anymore *)
-
-(* expects 
-CertiCoq.LambdaANF.cps.exp  :  Set 
-i think
- *)
 From Vellvm.Syntax Require Import LLVMAst.
 From Vellvm.QC Require Import ShowAST. (* pretty printer *)
 From CertiCoq.Common Require Import Common.
@@ -63,11 +51,7 @@ Definition main_def : definition typ (block typ * list (block typ)) :=
   |}.
 
 About toplevel_entities.
-(* 
-   Set (the value-type used in the program) 
--> Set(the type of function body) 
--> Set (result)
-  *)
+
 
 Definition trivial_module
   : @toplevel_entities typ (block typ * list (block typ)) :=
@@ -84,15 +68,10 @@ Definition LambdaANF_to_llvm
   : compM.error String.string := 
   compM.Ret (show trivial_module).
 
-
 About show.
-
-
-
 About dshow.
 (**  The CertiCoq LambdaANF pipeline returns a 7-tuple
      (pr, cenv, penv, nenv, fenv, <something>, e).      *)
-
 
 (* 
 (pr_env,          (* primitive environment *)
@@ -104,13 +83,6 @@ About dshow.
  _,               (* some internal flag *)
  prog : cps.exp)  (* the ANF term itself *)
  *)
-
-
-
-
- 
-
-
 
 Definition compile_llvm
            (prims : list (kername * string * bool * nat * positive))
