@@ -226,6 +226,10 @@ extraction/floatOps.mli
 extraction/floats.ml
 extraction/floats.mli
 
+extraction/zaux.ml
+extraction/zaux.mli
+extraction/archi0.ml
+extraction/archi0.mli
 extraction/floats0.ml
 extraction/floats0.mli
 extraction/integers0.ml
@@ -278,14 +282,12 @@ extraction/lLVMAst.ml
 extraction/lLVMAst.mli
 extraction/listUtil.ml
 extraction/listUtil.mli
-
 extraction/showAST.ml
 extraction/showAST.mli
 extraction/show0.ml
 extraction/show0.mli
 extraction/lambdaANF_to_llvm.ml
 extraction/lambdaANF_to_llvm.mli
-
 
 extraction/lambda_lifting.ml
 extraction/lambda_lifting.mli

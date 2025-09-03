@@ -117,7 +117,8 @@ Separate Extraction
          Glue.glue.generate_glue
          Glue.ffi.generate_ffi
          cps.M.elements
-         Compiler.pipeline.show_IR.
+         Compiler.pipeline.show_IR
+         Compiler.pipeline.compile_llvm.
 
 Recursive Extraction Library Ascii.
 Recursive Extraction Library BinPos.

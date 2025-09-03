@@ -122,6 +122,7 @@ Glue/ffi.v
 Compiler/pipeline.v
 
 # Extraction
+#Extraction/OCamlCompat.v
 Extraction/extraction.v
 ExtractionVanilla/VanillaExtrOCamlInt63.v
 ExtractionVanilla/VanillaExtrOCamlFloats.v

@@ -16,6 +16,8 @@ Require compcert.common.AST
 Require Glue.glue
         Compiler.pipeline.
 
+(* Require Import OCamlCompat.*)
+
 From MetaCoq.ErasurePlugin Require Import Erasure.
 (* Standard lib *)
 Require Import ExtrOcamlBasic ExtrOCamlFloats ExtrOCamlInt63 ExtrOCamlPString.
@@ -110,7 +112,8 @@ Separate Extraction
          Glue.glue.generate_glue
          Glue.ffi.generate_ffi
          cps.M.elements
-         Compiler.pipeline.show_IR.
+         Compiler.pipeline.show_IR
+         Compiler.pipeline.compile_llvm.
 
 Recursive Extraction Library Ascii.
 Recursive Extraction Library BinPos.
