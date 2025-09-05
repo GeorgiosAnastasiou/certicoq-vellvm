@@ -50,7 +50,7 @@ end
 
 
 (* Coq's [positive] type and some of its operations *)
-(* it was like this:
+open BinPos
 module P = struct
  
   let rec to_int = function
@@ -66,25 +66,6 @@ module P = struct
     if x = 0 then Coq_xH
     else BinPos.Pos.succ (of_int (pred x))
 end
-*)
-
-open BinPos
-module P = struct
-  let rec to_int = function
-  | XI p -> let n = to_int p in n + n + 1
-  | XO p -> let n = to_int p in n + n
-  | XH   -> 1
-
-  let rec to_int64 = function
-  | XI p -> let n = to_int64 p in Int64.add n (Int64.add n Int64.one)
-  | XO p -> let n = to_int64 p in Int64.add n n
-  | XH   -> Int64.one
-
-  let rec of_int x =
-    if x = 0 then XH
-    else BinPos.Pos.succ (of_int (pred x))
-end
-
 module Z = struct
   let to_int = function
   | Z0 -> 0
