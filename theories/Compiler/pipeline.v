@@ -13,6 +13,12 @@ From MetaCoq.Utils Require Import MCString.
 
 From CertiCoq.Codegenllvm Require Import 
     LambdaANF_to_llvm.
+Import LambdaANF_to_llvm.
+
+From Vellvm.Syntax Require Import LLVMAst.
+From Vellvm Require Import LLVMAst.
+From Vellvm.QC Require Import ShowAST.
+From Coq Require Import String List.
 
 Import Monads.
 Import MonadNotation.
@@ -29,6 +35,25 @@ Axiom (print : String.string -> Datatypes.unit).
  * We find the arity of the extracted constant from its type in [global_env]
  * after reification. Assumes that the type is in some normal form.
  *)
+
+Locate LambdaANF_to_llvm.
+Locate compile_LambdaANF_to_llvm.
+Locate LambdaANF_to_llvm.compile_LambdaANF_to_llvm.
+
+
+Module VellvmMod.
+  (* A Vellvm program (“module”) = list of toplevel entities *)
+  Definition t : Set :=
+    list (LLVMAst.toplevel_entity
+            LLVMAst.typ
+            (LLVMAst.block LLVMAst.typ * list (LLVMAst.block LLVMAst.typ))).
+
+  (* Pretty-printer to textual .ll *)
+  Definition show (m : t) : String.string := ShowAST.showProg m.
+End VellvmMod.
+
+
+
 
 Fixpoint find_arity (tau : Ast.term) : nat :=
   match tau with
@@ -50,7 +75,7 @@ Fixpoint find_prim_arity (env : Ast.Env.global_declarations) (pr : kername) : er
     else find_prim_arity env pr
   end.
 
-Fixpoint find_prim_arities (env : Ast.Env.global_declarations) (prs : list (kername * string * bool)) : error (list (kername * string * bool * nat * positive)) :=
+Fixpoint find_prim_arities (env : Ast.Env.global_declarations) (prs : list (kername * MCString.string * bool)) : error (list (kername * MCString.string * bool * nat * positive)) :=
   match prs with
   | [] => Ret []
   | ((pr, s), b) :: prs =>
@@ -65,8 +90,8 @@ Fixpoint find_prim_arities (env : Ast.Env.global_declarations) (prs : list (kern
   end.
 
 (* Picks an identifier for each primitive for internal representation *)
-Fixpoint pick_prim_ident (id : positive) (prs : list (kername * string * bool * nat * positive))
-: (list (kername * string * bool * nat * positive) * positive) :=
+Fixpoint pick_prim_ident (id : positive) (prs : list (kername * MCString.string * bool * nat * positive))
+: (list (kername * MCString.string * bool * nat * positive) * positive) :=
   match prs with
   | [] => ([], id)
   | (pr, s, b, a, _) :: prs =>
@@ -76,7 +101,7 @@ Fixpoint pick_prim_ident (id : positive) (prs : list (kername * string * bool * 
   end.
 
 
-Definition register_prims (id : positive) (env : Ast.Env.global_declarations) : pipelineM (list (kername * string * bool * nat * positive) * positive) :=
+Definition register_prims (id : positive) (env : Ast.Env.global_declarations) : pipelineM (list (kername * MCString.string * bool * nat * positive) * positive) :=
   o <- get_options ;;
   match find_prim_arities env (prims o) with
   | Ret prs =>
@@ -89,7 +114,7 @@ Definition register_prims (id : positive) (env : Ast.Env.global_declarations) : 
 Section Pipeline.
 
   Context (next_id : positive)
-          (prims : list (kername * string * bool * nat * positive))
+          (prims : list (kername * MCString.string * bool * nat * positive))
           (debug : bool).
 
   Fixpoint find_axioms {T} acc (env : environ T) := 
@@ -153,6 +178,9 @@ Definition default_opts : Options :=
      prims := [];
   |}.
 
+(* this is for a return type similar to certicoqwasm. However, we probably need a 
+return type for VellvmAst, to use Vellvm's pretty printer. 
+
 Definition pipeline_llvm (p : Template.Ast.Env.program) : pipelineM String.string :=
   let genv := fst p in
   '(prs, next_id) <- register_prims next_id genv.(Ast.Env.declarations) ;;
@@ -160,6 +188,16 @@ Definition pipeline_llvm (p : Template.Ast.Env.program) : pipelineM String.strin
  *)  p <- CertiCoq_pipeline next_id prs false p ;;
  (* compile_LambdaANF_to_llvm prs p. *)
      compile_llvm prs p.
+ *)
+
+
+Definition pipeline_llvm (p : Template.Ast.Env.program)
+  : pipelineM VellvmMod.t :=
+  let genv := fst p in
+  '(prs, next_id) <- register_prims next_id genv.(Ast.Env.declarations) ;;
+  p <- CertiCoq_pipeline next_id prs false p ;;
+  (* Call the new AST-returning entry point *)
+  compile_LambdaANF_to_llvm prs p.
 
 Definition make_opts
            (erasure_config : Erasure.erasure_configuration)
@@ -171,9 +209,9 @@ Definition make_opts
            (time : bool) (time_anf : bool)           (* timing options *)
            (debug : bool)                            (* Debug log *)
            (dev : nat)                               (* Extra flag for development purposes *)
-           (prefix : string)                         (* Prefix for the FFI. Check why is this needed in the pipeline and not just the plugin *)
-           (toplevel_name : string)                  (* Name of the toplevel function ("body" by default) *)
-           (prims : list (kername * string * bool))  (* list of extracted constants *)
+           (prefix : MCString.string)                         (* Prefix for the FFI. Check why is this needed in the pipeline and not just the plugin *)
+           (toplevel_name : MCString.string)                  (* Name of the toplevel function ("body" by default) *)
+           (prims : list (kername * MCString.string * bool))  (* list of extracted constants *)
   : Options :=
   {| erasure_config := erasure_config; 
      inductives_mapping := im;
@@ -197,7 +235,7 @@ Definition compile (opts : Options) (p : Template.Ast.Env.program) :=
 
 (** * For compiling to λ_ANF and printing out the code *)
 
-Definition show_IR (opts : Options) (p : Template.Ast.Env.program) : (error string * string) :=
+Definition show_IR (opts : Options) (p : Template.Ast.Env.program) : (error MCString.string * MCString.string) :=
   let genv := fst p in
   let ir_term p :=
       o <- get_options ;;
@@ -213,8 +251,18 @@ Definition show_IR (opts : Options) (p : Template.Ast.Env.program) : (error stri
   | Err s => (Err s, log)
   end.
 
-
+(* this is for a return type similar to webassembly's certicoqwasm compiler. 
 Definition compile_llvm (opts : Options) (p : Template.Ast.Env.program) 
   : error String.string * string :=
   let '(perr, log) := run_pipeline _ _ opts p pipeline_llvm in
   (perr, log).
+ *)
+
+(* However, for a return type of VellvmAst, we need: *)
+
+(* For now this returns textual information. *)
+
+
+Definition compile_llvm (opts : Options) (p : Template.Ast.Env.program)
+  : error VellvmMod.t * MCString.string :=
+  run_pipeline _ _ opts p pipeline_llvm.

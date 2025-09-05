@@ -902,7 +902,6 @@ module CompileFunctor (CI : CompilerInterface) = struct
     Printf.fprintf f "%s\n" s;
     close_out f
 
-
   let show_ir opts gr =
     let term = quote opts gr in
     let debug = opts.debug in
@@ -925,8 +924,55 @@ module CompileFunctor (CI : CompilerInterface) = struct
       debug_msg debug (string_of_bytestring dbg);
       CErrors.user_err Pp.(str "Could not compile: " ++ (pr_string s) ++ str "\n")
 
+(* here the wasm project has a print_to_file_no_nl *)
 
-  (* Quote Coq inductive type *)
+(* wasm equivalent: 
+  let compile_llvm opts gr =
+    let term = quote opts gr in
+    let debug = opts.debug in
+    let options = make_pipeline_options opts in
+    let p = Pipeline.compile_llvm options (Obj.magic term) in
+    match p with
+    | (CompM.Ret prg, dbg) ->
+      debug_msg debug "Finished compiling, printing to file.";
+      let time = Unix.gettimeofday() in
+      let suff = opts.ext in
+      let fname = opts.filename in
+      let file = fname ^ suff ^ "." in
+      print_to_file_no_nl (string_of_bytestring prg) file;
+      let time = (Unix.gettimeofday() -. time) in
+      debug_msg debug (Printf.sprintf "Printed to file %s in %f s.." file time);
+      debug_msg debug "Pipeline debug:";
+      debug_msg debug (string_of_bytestring dbg)
+    | (CompM.Err s, dbg) ->
+      debug_msg debug "Pipeline debug:";
+      debug_msg debug (string_of_bytestring dbg);
+      CErrors.user_err Pp.(str "compile_llvm" ++ (str "Could not compile: " ++ (pr_string s) ++ str "\n"))
+*)
+
+(* helper *)
+let write_text (s : string) (file : string) =
+  let oc = open_out file in
+  output_string oc s;
+  close_out oc
+
+let compile_llvm opts gr =
+  let term    = quote opts gr in
+  let debug   = opts.debug in
+  let options = make_pipeline_options opts in
+  (* coq type: error String.string * bytestring *)
+  let (res, dbg) = Pipeline.compile_LLVM options (Obj.magic term) in
+  match res with
+  | CompM.Ret ll_coqstr ->
+    let file = opts.filename ^ opts.ext ^ ".ll" in
+    (* convert coq String0.string -> OCaml string *)
+    let ll = Camlcoq.camlstring_of_coqstring ll_coqstr in
+    write_text ll file;
+    debug_msg debug ("Wrote " ^ file);
+    debug_msg debug "Pipeline debug:"; debug_msg debug (string_of_bytestring dbg)
+  | CompM.Err s ->
+    debug_msg debug "Pipeline debug:"; debug_msg debug (string_of_bytestring dbg);
+    CErrors.user_err Pp.(str "compile_llvm" ++ str " Could not compile: " ++ pr_string s ++ str "\n")  (* quote coq inductive type *)
   let quote_ind opts gr : Metacoq_template_plugin.Ast_quoter.quoted_program * string =
     let debug = opts.debug in
     let env = Global.env () in
