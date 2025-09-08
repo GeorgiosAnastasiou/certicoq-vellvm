@@ -950,46 +950,63 @@ module CompileFunctor (CI : CompilerInterface) = struct
       CErrors.user_err Pp.(str "compile_llvm" ++ (str "Could not compile: " ++ (pr_string s) ++ str "\n"))
 *)
 
+(* quote an inductive *)
+let quote_ind (opts : options) (gr : Names.GlobRef.t)
+  : Metacoq_template_plugin.Ast_quoter.quoted_program * string =
+  let debug = opts.debug in
+  let env = Global.env () in
+  let sigma = Evd.from_env env in
+  let sigma, c = Evd.fresh_global env sigma gr in
+  let name =
+    match gr with
+    | Names.GlobRef.IndRef i ->
+        let (mut, _) = i in
+        Names.KerName.to_string (Names.MutInd.canonical mut)
+    | _ ->
+        CErrors.user_err
+          Pp.(Printer.pr_global gr ++ str " is not an inductive type")
+  in
+  debug_msg debug "Quoting";
+  let t0 = Unix.gettimeofday () in
+  let term =
+    Metacoq_template_plugin.Ast_quoter.quote_term_rec
+      ~bypass:true env sigma (EConstr.to_constr sigma c)
+  in
+  let dt = Unix.gettimeofday () -. t0 in
+  debug_msg debug (Printf.sprintf "Finished quoting in %f s.." dt);
+  (term, name)
+
 (* helper *)
 let write_text (s : string) (file : string) =
   let oc = open_out file in
   output_string oc s;
   close_out oc
 
+(* minimal printer for dummy AST; TODO: replace *)
+let render_dummy_ll (_ast : 'a) : string =
+  "define i32 @main() {\nentry:\n  ret i32 42\n}\n"
+
 let compile_llvm opts gr =
   let term    = quote opts gr in
   let debug   = opts.debug in
   let options = make_pipeline_options opts in
-  (* coq type: error String.string * bytestring *)
-  let (res, dbg) = Pipeline.compile_LLVM options (Obj.magic term) in
+  (* Coq side: error VellvmMod.t * bytestring *)
+  let (res, dbg) = Pipeline.compile_llvm options (Obj.magic term) in
   match res with
-  | CompM.Ret ll_coqstr ->
-    let file = opts.filename ^ opts.ext ^ ".ll" in
-    (* convert coq String0.string -> OCaml string *)
-    let ll = Camlcoq.camlstring_of_coqstring ll_coqstr in
-    write_text ll file;
-    debug_msg debug ("Wrote " ^ file);
-    debug_msg debug "Pipeline debug:"; debug_msg debug (string_of_bytestring dbg)
+  | CompM.Ret ast ->
+      let file = opts.filename ^ opts.ext ^ ".ll" in
+      let ll = render_dummy_ll ast in
+      write_text ll file;
+      debug_msg debug ("Wrote " ^ file);
+      debug_msg debug "Pipeline debug:";
+      debug_msg debug (string_of_bytestring dbg)
   | CompM.Err s ->
-    debug_msg debug "Pipeline debug:"; debug_msg debug (string_of_bytestring dbg);
-    CErrors.user_err Pp.(str "compile_llvm" ++ str " Could not compile: " ++ pr_string s ++ str "\n")  (* quote coq inductive type *)
-  let quote_ind opts gr : Metacoq_template_plugin.Ast_quoter.quoted_program * string =
-    let debug = opts.debug in
-    let env = Global.env () in
-    let sigma = Evd.from_env env in
-    let sigma, c = Evd.fresh_global env sigma gr in
-    let name = match gr with
-      | Names.GlobRef.IndRef i -> 
-          let (mut, _) = i in
-          Names.KerName.to_string (Names.MutInd.canonical mut)
-      | _ -> CErrors.user_err
-        Pp.(Printer.pr_global gr ++ str " is not an inductive type") in
-    debug_msg debug "Quoting";
-    let time = Unix.gettimeofday() in
-    let term = quote_term_rec ~bypass:true env sigma (EConstr.to_constr sigma c) in
-    let time = (Unix.gettimeofday() -. time) in
-    debug_msg debug (Printf.sprintf "Finished quoting in %f s.." time);
-    (term, name)
+      debug_msg debug "Pipeline debug:";
+      debug_msg debug (string_of_bytestring dbg);
+      CErrors.user_err
+        Pp.(str "compile_llvm"
+            ++ str " Could not compile: "
+            ++ pr_string s ++ str "\n")
 
   let ffi_command opts gr =
     let (term, name) = quote_ind opts gr in

@@ -1,4 +1,5 @@
 Unset Universe Checking.
+
 Require Export LambdaBoxMut.toplevel LambdaBoxLocal.toplevel LambdaANF.toplevel Codegen.toplevel.
 Require Import compcert.lib.Maps.
 Require Import ZArith.
@@ -10,19 +11,23 @@ Require Import Glue.ffi.
 Require Import ExtLib.Structures.Monad.
 Require Import MetaCoq.Common.BasicAst.
 From MetaCoq.Utils Require Import MCString.
-
-From CertiCoq.Codegenllvm Require Import 
-    LambdaANF_to_llvm.
-Import LambdaANF_to_llvm.
-
-From Vellvm.Syntax Require Import LLVMAst.
-From Vellvm Require Import LLVMAst.
-From Vellvm.QC Require Import ShowAST.
-From Coq Require Import String List.
+From CertiCoq.Codegenllvm Require Import LambdaANF_to_llvm.
 
 Import Monads.
 Import MonadNotation.
 Import ListNotations.
+
+
+From Vellvm.Syntax Require Import LLVMAst.
+
+Module VellvmMod.
+  (* Vellvm “module” = list of toplevel entities *)
+  Definition t : Set :=
+    list (LLVMAst.toplevel_entity
+            LLVMAst.typ
+            (LLVMAst.block LLVMAst.typ * list (LLVMAst.block LLVMAst.typ))).
+End VellvmMod.
+
 
 (* Axioms that are only realized in ocaml *)
 Axiom (print_Clight : Clight.program -> Datatypes.unit).
@@ -33,27 +38,7 @@ Axiom (print : String.string -> Datatypes.unit).
 
 (* Each constant that is realized in the backend must have an associated arity.
  * We find the arity of the extracted constant from its type in [global_env]
- * after reification. Assumes that the type is in some normal form.
- *)
-
-Locate LambdaANF_to_llvm.
-Locate compile_LambdaANF_to_llvm.
-Locate LambdaANF_to_llvm.compile_LambdaANF_to_llvm.
-
-
-Module VellvmMod.
-  (* A Vellvm program (“module”) = list of toplevel entities *)
-  Definition t : Set :=
-    list (LLVMAst.toplevel_entity
-            LLVMAst.typ
-            (LLVMAst.block LLVMAst.typ * list (LLVMAst.block LLVMAst.typ))).
-
-  (* Pretty-printer to textual .ll *)
-  Definition show (m : t) : String.string := ShowAST.showProg m.
-End VellvmMod.
-
-
-
+ * after reification. Assumes that the type is in some normal form. *)
 
 Fixpoint find_arity (tau : Ast.term) : nat :=
   match tau with
@@ -71,27 +56,27 @@ Fixpoint find_prim_arity (env : Ast.Env.global_declarations) (pr : kername) : er
   match env with
   | [] => Err ("Constant " ++ string_of_kername pr ++ " not found in environment")
   | (n, gd) :: env =>
-    if eq_kername pr n then find_global_decl_arity  gd
+    if eq_kername pr n then find_global_decl_arity gd
     else find_prim_arity env pr
   end.
 
-Fixpoint find_prim_arities (env : Ast.Env.global_declarations) (prs : list (kername * MCString.string * bool)) : error (list (kername * MCString.string * bool * nat * positive)) :=
+Fixpoint find_prim_arities (env : Ast.Env.global_declarations) (prs : list (kername * string * bool)) : error (list (kername * string * bool * nat * positive)) :=
   match prs with
   | [] => Ret []
   | ((pr, s), b) :: prs =>
     match find_prim_arity env pr with
-    | Err _ => (* Be lenient, if a declared primitive is not part of the environment, just skip it *)
+    | Err _ =>
       prs' <- find_prim_arities env prs ;;
       Ret prs'
-    | Ret arity => 
+    | Ret arity =>
       prs' <- find_prim_arities env prs ;;
       Ret ((pr, s, b, arity, 1%positive) :: prs')
     end
   end.
 
 (* Picks an identifier for each primitive for internal representation *)
-Fixpoint pick_prim_ident (id : positive) (prs : list (kername * MCString.string * bool * nat * positive))
-: (list (kername * MCString.string * bool * nat * positive) * positive) :=
+Fixpoint pick_prim_ident (id : positive) (prs : list (kername * string * bool * nat * positive))
+: (list (kername * string * bool * nat * positive) * positive) :=
   match prs with
   | [] => ([], id)
   | (pr, s, b, a, _) :: prs =>
@@ -100,39 +85,36 @@ Fixpoint pick_prim_ident (id : positive) (prs : list (kername * MCString.string 
     ((pr, s, b, a, id) :: prs', id')
   end.
 
-
-Definition register_prims (id : positive) (env : Ast.Env.global_declarations) : pipelineM (list (kername * MCString.string * bool * nat * positive) * positive) :=
+Definition register_prims (id : positive) (env : Ast.Env.global_declarations) : pipelineM (list (kername * string * bool * nat * positive) * positive) :=
   o <- get_options ;;
   match find_prim_arities env (prims o) with
-  | Ret prs =>
-    ret (pick_prim_ident id prs)
+  | Ret prs => ret (pick_prim_ident id prs)
   | Err s => failwith s
   end.
 
 (** * CertiCoq's Compilation Pipeline, without code generation *)
 
 Section Pipeline.
-
   Context (next_id : positive)
-          (prims : list (kername * MCString.string * bool * nat * positive))
+          (prims : list (kername * string * bool * nat * positive))
           (debug : bool).
 
-  Fixpoint find_axioms {T} acc (env : environ T) := 
+  Fixpoint find_axioms {T} acc (env : environ T) :=
     match env with
     | [] => acc
-    | (kn, d) :: decls => 
+    | (kn, d) :: decls =>
       match d with
       | ecTrm _ => find_axioms acc decls
-      | ecTyp 0 [] => 
+      | ecTyp 0 [] =>
         if List.find (fun prim => ReflectEq.eqb kn (fst (fst (fst (fst prim))))) prims then find_axioms acc decls
         else find_axioms (kn :: acc) decls
       | ecTyp _ _ => find_axioms acc decls
-      end 
+      end
     end.
 
   Definition check_axioms (p : Program (compile.Term)) : pipelineM Datatypes.unit :=
     match find_axioms [] p.(env) with
-    | [] => ret tt 
+    | [] => ret tt
     | l => failwith ("Axioms found, use Extract Constant to realize them in C: " ++ newline ++
       print_list string_of_kername ", " l)%bs
     end.
@@ -143,10 +125,8 @@ Section Pipeline.
     check_axioms p ;;
     p <- compile_LambdaBoxLocal prims p ;;
     p <- (if direct o then compile_LambdaANF_ANF next_id prims p else compile_LambdaANF_CPS next_id prims p) ;;
-    if debug then compile_LambdaANF_debug next_id p  (* For debugging intermediate states of the λanf pipeline *)
+    if debug then compile_LambdaANF_debug next_id p
     else compile_LambdaANF next_id p.
-    
-
 End Pipeline.
 
 Definition next_id := 100%positive.
@@ -156,10 +136,9 @@ Definition next_id := 100%positive.
 Definition pipeline (p : Template.Ast.Env.program) :=
   let genv := fst p in
   '(prs, next_id) <- register_prims next_id genv.(Ast.Env.declarations) ;;
-(*   p <- erase_PCUIC p ;;
- *)  p <- CertiCoq_pipeline next_id prs false p ;;
+(*   p <- erase_PCUIC p ;; *)
+  p <- CertiCoq_pipeline next_id prs false p ;;
   compile_Clight prs p.
- 
 
 Definition default_opts : Options :=
   {| erasure_config := Erasure.default_erasure_config;
@@ -175,45 +154,29 @@ Definition default_opts : Options :=
      dev := 0;
      Pipeline_utils.prefix := "";
      Pipeline_utils.body_name := "body";
-     prims := [];
-  |}.
-
-(* this is for a return type similar to certicoqwasm. However, we probably need a 
-return type for VellvmAst, to use Vellvm's pretty printer. 
-
-Definition pipeline_llvm (p : Template.Ast.Env.program) : pipelineM String.string :=
-  let genv := fst p in
-  '(prs, next_id) <- register_prims next_id genv.(Ast.Env.declarations) ;;
-(*   p <- erase_PCUIC p ;;
- *)  p <- CertiCoq_pipeline next_id prs false p ;;
- (* compile_LambdaANF_to_llvm prs p. *)
-     compile_llvm prs p.
- *)
-
+     prims := [] |}.
 
 Definition pipeline_llvm (p : Template.Ast.Env.program)
   : pipelineM VellvmMod.t :=
   let genv := fst p in
   '(prs, next_id) <- register_prims next_id genv.(Ast.Env.declarations) ;;
   p <- CertiCoq_pipeline next_id prs false p ;;
-  (* Call the new AST-returning entry point *)
   compile_LambdaANF_to_llvm prs p.
 
 Definition make_opts
            (erasure_config : Erasure.erasure_configuration)
            (im : EProgram.inductives_mapping)
-           (cps : bool)                              (* CPS or direct *)
-           (args : nat)                              (* number of C args *)
-           (conf : nat)                              (* λ_ANF configuration *)
-           (o_level : nat)                           (* optimization level *)
-           (time : bool) (time_anf : bool)           (* timing options *)
-           (debug : bool)                            (* Debug log *)
-           (dev : nat)                               (* Extra flag for development purposes *)
-           (prefix : MCString.string)                         (* Prefix for the FFI. Check why is this needed in the pipeline and not just the plugin *)
-           (toplevel_name : MCString.string)                  (* Name of the toplevel function ("body" by default) *)
-           (prims : list (kername * MCString.string * bool))  (* list of extracted constants *)
-  : Options :=
-  {| erasure_config := erasure_config; 
+           (cps : bool)
+           (args : nat)
+           (conf : nat)
+           (o_level : nat)
+           (time : bool) (time_anf : bool)
+           (debug : bool)
+           (dev : nat)
+           (prefix : string)
+           (toplevel_name : string)
+           (prims : list (kername * string * bool)) : Options :=
+  {| erasure_config := erasure_config;
      inductives_mapping := im;
      direct := negb cps;
      c_args := args;
@@ -226,16 +189,14 @@ Definition make_opts
      dev := dev;
      Pipeline_utils.prefix := prefix;
      Pipeline_utils.body_name := toplevel_name;
-     prims :=  prims |}.
-
+     prims := prims |}.
 
 Definition compile (opts : Options) (p : Template.Ast.Env.program) :=
   run_pipeline _ _ opts p pipeline.
 
-
 (** * For compiling to λ_ANF and printing out the code *)
 
-Definition show_IR (opts : Options) (p : Template.Ast.Env.program) : (error MCString.string * MCString.string) :=
+Definition show_IR (opts : Options) (p : Template.Ast.Env.program) : (error string * string) :=
   let genv := fst p in
   let ir_term p :=
       o <- get_options ;;
@@ -246,23 +207,11 @@ Definition show_IR (opts : Options) (p : Template.Ast.Env.program) : (error MCSt
   let (perr, log) := run_pipeline _ _ opts p ir_term in
   match perr with
   | Ret p =>
-    let '(pr, cenv, _, _, nenv, fenv, _,  e) := p in
+    let '(pr, cenv, _, _, nenv, fenv, _, e) := p in
     (Ret (cps_show.show_exp nenv cenv false e), log)
   | Err s => (Err s, log)
   end.
 
-(* this is for a return type similar to webassembly's certicoqwasm compiler. 
-Definition compile_llvm (opts : Options) (p : Template.Ast.Env.program) 
-  : error String.string * string :=
-  let '(perr, log) := run_pipeline _ _ opts p pipeline_llvm in
-  (perr, log).
- *)
-
-(* However, for a return type of VellvmAst, we need: *)
-
-(* For now this returns textual information. *)
-
-
 Definition compile_llvm (opts : Options) (p : Template.Ast.Env.program)
-  : error VellvmMod.t * MCString.string :=
+  : error VellvmMod.t * string :=
   run_pipeline _ _ opts p pipeline_llvm.

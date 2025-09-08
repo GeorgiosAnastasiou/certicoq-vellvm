@@ -274,18 +274,18 @@ extraction/lambdaBoxLocal_to_LambdaANF.mli
 extraction/lambdaBoxMut_to_LambdaBoxLocal.ml
 extraction/lambdaBoxMut_to_LambdaBoxLocal.mli
 
-extraction/dList.ml
-extraction/dList.mli
-extraction/hexadecimalString.ml
-extraction/hexadecimalString.mli
+#extraction/dList.ml
+#extraction/dList.mli
+#extraction/hexadecimalString.ml
+#extraction/hexadecimalString.mli
 extraction/lLVMAst.ml
 extraction/lLVMAst.mli
-extraction/listUtil.ml
-extraction/listUtil.mli
-extraction/showAST.ml
-extraction/showAST.mli
-extraction/show0.ml
-extraction/show0.mli
+#extraction/listUtil.ml
+#extraction/listUtil.mli
+#extraction/showAST.ml
+#extraction/showAST.mli
+#extraction/show0.ml
+#extraction/show0.mli
 extraction/lambdaANF_to_llvm.ml
 extraction/lambdaANF_to_llvm.mli
 
