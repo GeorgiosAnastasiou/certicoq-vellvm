@@ -66,6 +66,7 @@ module P = struct
     if x = 0 then Coq_xH
     else BinPos.Pos.succ (of_int (pred x))
 end
+
 module Z = struct
   let to_int = function
   | Z0 -> 0
