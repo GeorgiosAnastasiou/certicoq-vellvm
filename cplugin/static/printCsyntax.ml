@@ -207,10 +207,12 @@ let print_typed_value p v ty =
   | Vsingle f, _ ->
       print_float p (camlfloat_of_coqfloat32 f)
   | Vlong n, Ctypes.Tlong(Unsigned, _) ->
-      Printf.printf "Printing long: %s\n" (Int64.to_string (Z.to_int64 (Integers.Int64.intval n)));
-      fprintf p "%LuLLU" (camlint64_of_coqint n)
+    let { Integers.Int64.intval = z } = n in
+    Printf.printf "Printing long: %s\n" (Int64.to_string (Z.to_int64 z));
+    fprintf p "%LuLLU" (camlint64_of_coqint n)
   | Vlong n, _ ->
-    Printf.printf "Printing long: %s\n" (Int64.to_string (Z.to_int64 (Integers.Int64.intval n)));
+    let { Integers.Int64.intval = z } = n in
+    Printf.printf "Printing long: %s\n" (Int64.to_string (Z.to_int64 z));
     fprintf p "%LdLL" (camlint64_of_coqint n)
   | Vptr(b, ofs), _ ->
       fprintf p "<ptr%a>" !print_pointer_hook (b, Obj.magic ofs)

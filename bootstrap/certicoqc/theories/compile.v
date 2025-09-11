@@ -1,3 +1,4 @@
+Unset Universe Checking.
 From CertiCoq.Plugin Require Import CertiCoq.
 From MetaCoq.Utils Require Import utils.
 Open Scope bs_scope.

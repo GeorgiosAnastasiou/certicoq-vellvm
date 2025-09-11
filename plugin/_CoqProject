@@ -39,6 +39,10 @@ extraction/all_Forall.ml
 extraction/all_Forall.mli
 extraction/archi.ml
 extraction/archi.mli
+
+#extraction/archi0.ml
+#extraction/archi0.mli
+
 extraction/ascii.ml
 extraction/ascii.mli
 extraction/ast0.ml
@@ -226,10 +230,10 @@ extraction/floatOps.mli
 extraction/floats.ml
 extraction/floats.mli
 
-extraction/zaux.ml
-extraction/zaux.mli
-extraction/archi0.ml
-extraction/archi0.mli
+#extraction/zaux.ml
+#extraction/zaux.mli
+#extraction/archi0.ml
+#extraction/archi0.mli
 extraction/floats0.ml
 extraction/floats0.mli
 extraction/integers0.ml

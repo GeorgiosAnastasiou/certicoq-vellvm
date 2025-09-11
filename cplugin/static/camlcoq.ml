@@ -21,7 +21,10 @@ open BinNums
 open BinNat
 open BinInt
 open BinPos
-open! Floats
+open Floats
+module Float0 = Floats0.Float
+module Float032 = Floats0.Float32
+open Integers0
 
 (* Coq's [nat] type and some of its operations *)
 
@@ -276,8 +279,13 @@ let coqint_of_camlint (i : int32) : Integers.Int.int =
   Integers.Int.{ intval = Z.of_uint32 i }
 
    (* interpret the int32 as unsigned so that result Z is in range for int *)
+(* was:
 let camlint64_of_coqint (i : Integers.Int64.int) : int64 = 
   Z.to_int64 (Integers.Int64.intval i)
+*)
+
+let camlint64_of_coqint (i : Integers.Int64.int) : int64 =
+  Z.to_int64 i.intval
 
 let coqint_of_camlint64 (i : int64) : Integers.Int64.int = 
   Integers.Int64.{ intval = Z.of_uint64 i }
@@ -338,16 +346,38 @@ let coqstring_uppercase_ascii_of_camlstring s =
   in cstring [] (String.length s - 1)
 
 (* Floats *)
-
+(*
 let coqfloat_of_camlfloat f =
-  Float.of_bits(coqint_of_camlint64(Int64.bits_of_float f))
+  Float0.of_bits(coqint_of_camlint64(Int64.bits_of_float f))
 let camlfloat_of_coqfloat f =
-  Int64.float_of_bits(camlint64_of_coqint(Float.to_bits f))
+  Int64.float_of_bits(camlint64_of_coqint(Float0.to_bits f))
 
 let coqfloat32_of_camlfloat f =
-  Float32.of_bits(coqint_of_camlint(Int32.bits_of_float f))
+  Float032.of_bits(coqint_of_camlint(Int32.bits_of_float f))
 let camlfloat_of_coqfloat32 f =
-  Int32.float_of_bits(camlint_of_coqint(Float32.to_bits f))
+  Int32.float_of_bits(camlint_of_coqint(Float032.to_bits f))
+*)
+
+(* Floats0.Float.of_bits expects Integers0.bit_int *)
+let coqfloat_of_camlfloat f =
+  let z = Z.of_uint64 (Int64.bits_of_float f) in
+  Float0.of_bits { Integers0.intval = z }
+
+let camlfloat_of_coqfloat f =
+  let bi : Integers0.bit_int = Float0.to_bits f in
+  Int64.float_of_bits (Z.to_int64 bi.intval)
+
+(* Floats0.Float32.of_bits expects Integers0.bit_int as well *)
+let coqfloat32_of_camlfloat f =
+  let z = Z.of_uint32 (Int32.bits_of_float f) in
+  Float032.of_bits { Integers0.intval = z }
+
+let camlfloat_of_coqfloat32 f =
+  let bi : Integers0.bit_int = Float032.to_bits f in
+  Int32.float_of_bits (Z.to_int32 bi.intval)
+
+
+
 
 let rec implode = function
     []       -> ""
