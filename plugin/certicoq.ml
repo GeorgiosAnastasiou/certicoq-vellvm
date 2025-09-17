@@ -976,27 +976,35 @@ let quote_ind (opts : options) (gr : Names.GlobRef.t)
   debug_msg debug (Printf.sprintf "Finished quoting in %f s.." dt);
   (term, name)
 
-(* helper *)
+  (* helper *)
 let write_text (s : string) (file : string) =
   let oc = open_out file in
   output_string oc s;
   close_out oc
 
-(* minimal printer for dummy AST; TODO: replace *)
-let render_dummy_ll (_ast : 'a) : string =
-  "define i32 @main() {\nentry:\n  ret i32 42\n}\n"
+let char_of_ascii (a : Ascii.ascii) : char =
+  match a with
+  | Ascii.Ascii (b0,b1,b2,b3,b4,b5,b6,b7) ->
+      let bit b i = if b then 1 lsl i else 0 in
+      Char.chr ( bit b0 0 + bit b1 1 + bit b2 2 + bit b3 3
+               + bit b4 4 + bit b5 5 + bit b6 6 + bit b7 7 )
+
+let rec ocaml_of_coq_string (s : String0.string) : string =
+  match s with
+  | String0.EmptyString -> ""
+  | String0.String (c, s') ->
+      String.make 1 (char_of_ascii c) ^ ocaml_of_coq_string s'
+
 
 let compile_llvm opts gr =
   let term    = quote opts gr in
   let debug   = opts.debug in
   let options = make_pipeline_options opts in
-  (* Coq side: error VellvmMod.t * bytestring *)
   let (res, dbg) = Pipeline.compile_llvm options (Obj.magic term) in
   match res with
-  | CompM.Ret ast ->
+  | CompM.Ret ll ->
       let file = opts.filename ^ opts.ext ^ ".ll" in
-      let ll = render_dummy_ll ast in
-      write_text ll file;
+      write_text (ocaml_of_coq_string ll) file;
       debug_msg debug ("Wrote " ^ file);
       debug_msg debug "Pipeline debug:";
       debug_msg debug (string_of_bytestring dbg)
@@ -1008,35 +1016,37 @@ let compile_llvm opts gr =
             ++ str " Could not compile: "
             ++ pr_string s ++ str "\n")
 
-  let ffi_command opts gr =
-    let (term, name) = quote_ind opts gr in
-    let debug = opts.debug in
-    let options = make_pipeline_options opts in
 
+
+let ffi_command opts gr =
+  let (term, name) = quote_ind opts gr in
+  let debug = opts.debug in
+  let options = make_pipeline_options opts in
+
+  let time = Unix.gettimeofday() in
+  (match CI.generate_ffi options (Obj.magic term) with
+  | CompM.Ret (((nenv, header), prg), logs) ->
+    let time = (Unix.gettimeofday() -. time) in
+    debug_msg debug (Printf.sprintf "Generated FFI glue code in %f s.." time);
+    (match logs with [] -> () | _ ->
+      debug_msg debug (Printf.sprintf "Logs:\n%s" (String.concat "\n" (List.map string_of_bytestring logs))));
     let time = Unix.gettimeofday() in
-    (match CI.generate_ffi options (Obj.magic term) with
-    | CompM.Ret (((nenv, header), prg), logs) ->
-      let time = (Unix.gettimeofday() -. time) in
-      debug_msg debug (Printf.sprintf "Generated FFI glue code in %f s.." time);
-      (match logs with [] -> () | _ ->
-        debug_msg debug (Printf.sprintf "Logs:\n%s" (String.concat "\n" (List.map string_of_bytestring logs))));
-      let time = Unix.gettimeofday() in
-      let suff = opts.ext in
-      let cstr = ("ffi." ^ name ^ suff ^ ".c") in
-      let hstr = ("ffi." ^ name ^ suff ^ ".h") in
-      CI.printProg prg nenv cstr [];
-      CI.printProg header nenv hstr [];
+    let suff = opts.ext in
+    let cstr = ("ffi." ^ name ^ suff ^ ".c") in
+    let hstr = ("ffi." ^ name ^ suff ^ ".h") in
+    CI.printProg prg nenv cstr [];
+    CI.printProg header nenv hstr [];
 
-      let time = (Unix.gettimeofday() -. time) in
-      debug_msg debug (Printf.sprintf "Printed FFI glue code to file in %f s.." time)
-    | CompM.Err s ->
-      CErrors.user_err Pp.(str "Could not generate FFI glue code: " ++ pr_string s))
+    let time = (Unix.gettimeofday() -. time) in
+    debug_msg debug (Printf.sprintf "Printed FFI glue code to file in %f s.." time)
+  | CompM.Err s ->
+    CErrors.user_err Pp.(str "Could not generate FFI glue code: " ++ pr_string s))
 
-  let glue_command opts grs =
-    let terms = grs |> List.rev
-                |> List.map (fun gr -> Metacoq_template_plugin.Ast0.Env.declarations (fst (quote opts gr))) 
-                |> List.concat |> nub in
-    generate_glue true opts (Obj.magic terms)
+let glue_command opts grs =
+  let terms = grs |> List.rev
+              |> List.map (fun gr -> Metacoq_template_plugin.Ast0.Env.declarations (fst (quote opts gr))) 
+              |> List.concat |> nub in
+  generate_glue true opts (Obj.magic terms)
 
 end
 

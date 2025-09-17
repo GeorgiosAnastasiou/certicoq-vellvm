@@ -230,10 +230,10 @@ extraction/floatOps.mli
 extraction/floats.ml
 extraction/floats.mli
 
-#extraction/zaux.ml
-#extraction/zaux.mli
-#extraction/archi0.ml
-#extraction/archi0.mli
+extraction/zaux.ml
+extraction/zaux.mli
+extraction/archi0.ml
+extraction/archi0.mli
 extraction/floats0.ml
 extraction/floats0.mli
 extraction/integers0.ml
@@ -282,6 +282,8 @@ extraction/lambdaBoxMut_to_LambdaBoxLocal.mli
 #extraction/dList.mli
 #extraction/hexadecimalString.ml
 #extraction/hexadecimalString.mli
+extraction/listUtil.ml
+extraction/listUtil.mli
 extraction/lLVMAst.ml
 extraction/lLVMAst.mli
 #extraction/listUtil.ml
@@ -478,6 +480,18 @@ extraction/toplevel1.ml
 extraction/toplevel1.mli
 extraction/toplevel2.ml
 extraction/toplevel2.mli
+
+extraction/show0.ml
+extraction/show0.mli
+extraction/hexadecimalString.ml
+extraction/hexadecimalString.mli
+extraction/dList.ml
+extraction/dList.mli
+extraction/showAST.ml
+extraction/showAST.mli
+extraction/toplevel3.ml
+extraction/toplevel3.mli
+
 extraction/transform.ml
 extraction/transform.mli
 extraction/typing0.ml

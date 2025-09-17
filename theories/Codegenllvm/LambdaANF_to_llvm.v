@@ -41,8 +41,10 @@ Definition trivial_module_ast
             (block typ * list (block typ))) :=
   [ TLE_Definition main_def ].
 
+(* *)
+
 Definition compile_LambdaANF_to_llvm
-  (prims : list (kername * MCString.string * bool * nat * positive))
+  (prims : list (kername * string * bool * nat * positive))
   : CertiCoqTrans toplevel.LambdaANF_FullTerm
                   (list (toplevel_entity typ (block typ * list (block typ)))) :=
   fun st =>

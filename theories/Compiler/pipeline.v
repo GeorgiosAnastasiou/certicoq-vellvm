@@ -1,6 +1,6 @@
 Unset Universe Checking.
 
-Require Export LambdaBoxMut.toplevel LambdaBoxLocal.toplevel LambdaANF.toplevel Codegen.toplevel.
+Require Export LambdaBoxMut.toplevel LambdaBoxLocal.toplevel LambdaANF.toplevel Codegen.toplevel Codegenllvm.toplevel.
 Require Import compcert.lib.Maps.
 Require Import ZArith.
 Require Import Common.Common Common.compM Common.Pipeline_utils.
@@ -11,7 +11,8 @@ Require Import Glue.ffi.
 Require Import ExtLib.Structures.Monad.
 Require Import MetaCoq.Common.BasicAst.
 From MetaCoq.Utils Require Import MCString.
-From CertiCoq.Codegenllvm Require Import LambdaANF_to_llvm.
+(*From CertiCoq.Codegenllvm Require Import LambdaANF_to_llvm.*)
+
 
 Import Monads.
 Import MonadNotation.
@@ -84,6 +85,8 @@ Fixpoint pick_prim_ident (id : positive) (prs : list (kername * string * bool * 
     let (prs', id') := pick_prim_ident next_id prs in
     ((pr, s, b, a, id) :: prs', id')
   end.
+
+(* maybe need to update this. string is too vague here, and is depending on imports *)
 
 Definition register_prims (id : positive) (env : Ast.Env.global_declarations) : pipelineM (list (kername * string * bool * nat * positive) * positive) :=
   o <- get_options ;;
@@ -212,6 +215,16 @@ Definition show_IR (opts : Options) (p : Template.Ast.Env.program) : (error stri
   | Err s => (Err s, log)
   end.
 
+(*
 Definition compile_llvm (opts : Options) (p : Template.Ast.Env.program)
   : error VellvmMod.t * string :=
   run_pipeline _ _ opts p pipeline_llvm.
+ *)
+
+Definition compile_llvm (opts : Options) (p : Template.Ast.Env.program)
+  : error String.string * string :=
+  let (res, log) := run_pipeline _ _ opts p pipeline_llvm in
+  match res with
+  | Ret m => (Ret (Codegenllvm.toplevel.llvm_string m), log)
+  | Err e => (Err e, log)
+  end.
