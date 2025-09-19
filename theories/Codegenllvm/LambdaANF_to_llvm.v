@@ -7,11 +7,7 @@ Import MonadNotation.
 From CertiCoq.LambdaANF Require Import cps toplevel.
 From CertiCoq.Common    Require Import Common Pipeline_utils.
 From MetaCoq.Utils      Require Import MCString.
-
-(* Vellvm AST *)
 From Vellvm.Syntax Require Import LLVMAst.
-(* Some setups also re-export under Vellvm.LLVMAst; having both is harmless *)
-From Vellvm          Require Import LLVMAst.
 
 Open Scope string_scope.
 Open Scope monad_scope.
@@ -41,8 +37,10 @@ Definition trivial_module_ast
             (block typ * list (block typ))) :=
   [ TLE_Definition main_def ].
 
+
+
 Definition compile_LambdaANF_to_llvm
-  (prims : list (kername * MCString.string * bool * nat * positive))
+  (prims : list (kername * string * bool * nat * positive))
   : CertiCoqTrans toplevel.LambdaANF_FullTerm
                   (list (toplevel_entity typ (block typ * list (block typ)))) :=
   fun st =>

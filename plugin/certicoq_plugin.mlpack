@@ -261,6 +261,8 @@ Integers0
 
 Floats
 
+Zaux
+Archi0
 Floats0  
 
 AST
@@ -290,13 +292,19 @@ OptionMonad
 LambdaANF_to_Clight
 LambdaANF_to_Clight_stack
 
+ListUtil
 LLVMAst
 LambdaANF_to_llvm
+Show0
+HexadecimalString
+DList
+ShowAST
 
 Toplevel
 Toplevel0
 Toplevel1
 Toplevel2
+Toplevel3
 
 Glue_utils
 Glue

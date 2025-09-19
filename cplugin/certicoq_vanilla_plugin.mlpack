@@ -255,16 +255,16 @@ Binary
 Bits
 IEEE754_extra
 Archi
-
-
 Zbits
 Integers
 
 Integers0
+Zaux
+Archi0
 
 Floats
 
-Floats0
+Floats0 
 
 AST
 Values
@@ -289,14 +289,19 @@ PrintCsyntax
 PrintClight
 LambdaANF_to_Clight
 LambdaANF_to_Clight_stack
-
-LLVMAst
-LambdaANF_to_llvm
-
 Toplevel
 Toplevel0
 Toplevel1
 Toplevel2
+
+Show0 
+ListUtil
+LLVMAst
+HexadecimalString
+DList
+ShowAST
+LambdaANF_to_llvm
+
 Toplevel3
 Glue_utils
 Glue
