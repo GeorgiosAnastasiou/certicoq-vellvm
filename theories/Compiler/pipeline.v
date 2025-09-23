@@ -18,7 +18,6 @@ Import Monads.
 Import MonadNotation.
 Import ListNotations.
 
-
 From Vellvm.Syntax Require Import LLVMAst.
 
 Module VellvmMod.
@@ -29,6 +28,13 @@ Module VellvmMod.
             (LLVMAst.block LLVMAst.typ * list (LLVMAst.block LLVMAst.typ))).
 End VellvmMod.
 
+Locate string.
+Locate MCString.string.
+Locate String.string.
+
+Search String.string.
+
+Search (String.string -> string).
 
 (* Axioms that are only realized in ocaml *)
 Axiom (print_Clight : Clight.program -> Datatypes.unit).
@@ -221,10 +227,12 @@ Definition compile_llvm (opts : Options) (p : Template.Ast.Env.program)
   run_pipeline _ _ opts p pipeline_llvm.
  *)
 
+(* TODO String.of_string *)
+
 Definition compile_llvm (opts : Options) (p : Template.Ast.Env.program)
-  : error String.string * string :=
+  : error string * string :=
   let (res, log) := run_pipeline _ _ opts p pipeline_llvm in
   match res with
-  | Ret m => (Ret (Codegenllvm.toplevel.llvm_string m), log)
+  | Ret m => (Ret (String.of_string(Codegenllvm.toplevel.llvm_string m)), log)
   | Err e => (Err e, log)
   end.

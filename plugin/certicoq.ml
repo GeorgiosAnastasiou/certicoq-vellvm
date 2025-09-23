@@ -989,13 +989,6 @@ module CompileFunctor (CI : CompilerInterface) = struct
         Char.chr ( bit b0 0 + bit b1 1 + bit b2 2 + bit b3 3
                  + bit b4 4 + bit b5 5 + bit b6 6 + bit b7 7 )
 
-  let rec ocaml_of_coq_string (s : String0.string) : string =
-    match s with
-    | String0.EmptyString -> ""
-    | String0.String (c, s') ->
-        String.make 1 (char_of_ascii c) ^ ocaml_of_coq_string s'
-
-
   let compile_llvm opts gr =
     let term    = quote opts gr in
     let debug   = opts.debug in
@@ -1004,7 +997,8 @@ module CompileFunctor (CI : CompilerInterface) = struct
     match res with
     | CompM.Ret ll ->
         let file = opts.filename ^ opts.ext ^ ".ll" in
-        write_text (ocaml_of_coq_string ll) file;
+        (* ll : MCString.string (= string) *)
+        write_text (string_of_bytestring ll) file;
         debug_msg debug ("Wrote " ^ file);
         debug_msg debug "Pipeline debug:";
         debug_msg debug (string_of_bytestring dbg)
@@ -1014,7 +1008,7 @@ module CompileFunctor (CI : CompilerInterface) = struct
         CErrors.user_err
           Pp.(str "compile_llvm"
               ++ str " Could not compile: "
-              ++ pr_string s ++ str "\n")
+              ++ str (string_of_bytestring s) ++ str "\n")
 
 
 
