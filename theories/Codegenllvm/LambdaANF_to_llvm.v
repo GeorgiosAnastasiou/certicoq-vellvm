@@ -378,7 +378,8 @@ Fixpoint translate_exp (cenv : ctor_env) (penv : prim_env) (fnames : list var) (
       emit (IId isu, INSTR_Op (OP_ICmp Eq word_t (EXP_Ident (ID_Local lb)) (EXP_Integer 1%Z))) ;;
       ret (TERM_Br (TYPE_I 1%positive, EXP_Ident (ID_Local isu)) ub_lbl bx_lbl)
   | Efun _ _ =>
-         which also rejects Efun inside a body) *)
+      (* functions are hoisted to the top level; nested Efun should not occur
+         (the C backend also rejects it inside a body) *)
       gen_fail "translate_exp: nested Efun (term should be hoisted)"
   | Eprim_val x p e' =>
       match p with
